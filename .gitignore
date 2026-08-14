@@ -6,3 +6,4 @@ projects/*/
 .pytest_cache/
 
 sample-60fps.mp4
+*.mp4
