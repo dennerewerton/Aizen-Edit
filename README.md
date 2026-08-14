@@ -67,7 +67,7 @@ A página **Configurar layout do Free Fire** extrai um frame, permite escolher w
 
 - **Página não inicia:** rode `setup.bat` uma vez e execute novamente `start.bat`.
 - **FFmpeg não encontrado:** instale uma build Windows e adicione a pasta `bin` ao PATH.
-- **Sem transcrição:** instale `faster-whisper`; em Python 3.14 ele pode ainda não possuir uma distribuição compatível. O restante do MVP funciona sem ele.
+- **Sem transcrição:** execute `setup.bat` para instalar `faster-whisper`. O aplicativo usa CPU com `int8` como fallback local; se a transcrição ainda falhar, o restante do pipeline continua disponível e mostra o motivo na tela.
 - **Render falha com AMF:** o atual render usa `libx264` de forma estável. A aceleração AMD está documentada para evolução futura, depois de um vídeo real de teste.
 
 ## Desenvolvimento
