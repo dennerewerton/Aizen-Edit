@@ -1,6 +1,7 @@
 from app.core.edl import edl_duration, make_edl
 from app.core.captions import build_srt, srt_timestamp
 from app.core.gameplay import normalized_to_pixels
+from app.core.gameplay import build_activity_score
 from app.core.highlights import group_events
 from app.core.layout import validate_layout
 from app.core.jobs import JobManager
@@ -87,3 +88,8 @@ def test_captions_use_output_timeline_offsets(tmp_path):
     count = build_srt({"segments": [{"start": 11, "end": 12, "text": "nossa!"}]}, [{"start": 10, "end": 15}, {"start": 20, "end": 25}], output, "all")
     assert count == 1 and "00:00:01,000 --> 00:00:02,000" in output.read_text(encoding="utf-8")
     assert srt_timestamp(3661.234) == "01:01:01,234"
+
+
+def test_activity_score_combines_motion_audio_and_speech():
+    score = build_activity_score([{"time": 1, "motion": .8}], [{"time": 1, "energy": .5}], {"segments": [{"start": .5, "end": 1.5}]})
+    assert score == [{"time": 1, "activity": .75, "motion": .8, "audio": .5, "speech": 1.0}]

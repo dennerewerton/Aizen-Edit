@@ -37,3 +37,15 @@ def detect_events(visual: list[dict], audio: list[dict], threshold: float = 0.55
             events.append({"start": point["time"], "end": point["time"] + 1.0, "type": "idle", "confidence": round(1 - combat, 3), "signals": {"motion": point["motion"], "audio": sound, "speech": 0.0}})
     return events
 
+
+def build_activity_score(visual: list[dict], audio: list[dict], transcript: dict) -> list[dict]:
+    """Join lightweight per-second signals without decoding all video frames."""
+    audio_by_time = {round(point["time"]): point["energy"] for point in audio}
+    result = []
+    for point in visual:
+        time = point["time"]
+        speech = any(float(segment["start"]) <= time <= float(segment["end"]) for segment in transcript.get("segments", []))
+        sound = audio_by_time.get(round(time), 0.0)
+        activity = min(1.0, .5 * point["motion"] + .3 * sound + .2 * float(speech))
+        result.append({"time": time, "activity": round(activity, 4), "motion": point["motion"], "audio": sound, "speech": float(speech)})
+    return result
