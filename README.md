@@ -16,6 +16,10 @@ O detector de combate é heurístico v1 (movimento + energia de áudio). A trans
 
 O `faster-whisper` baixa um modelo local no primeiro uso. Sem ele, a análise visual continua e a interface informa que a transcrição não está disponível.
 
+### LLM local opcional
+
+`config/default.json` deixa o LLM local desativado. Quando desejar testar um Ollama local, defina `enabled` como `true` e informe um `model`. Essa integração é somente para trechos pequenos de transcrição e não é necessária para editar vídeos.
+
 ## Primeiro uso
 
 1. Execute `start.bat`.

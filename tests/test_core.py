@@ -5,6 +5,7 @@ from app.core.gameplay import normalized_to_pixels
 from app.core.gameplay import build_activity_score
 from app.core.highlights import group_events
 from app.core.layout import validate_layout
+from app.core.local_llm import LocalLLM
 from app.core.jobs import JobManager
 from app.core.project import source_signature
 from app.core import project as project_module
@@ -109,3 +110,8 @@ def test_webcam_effect_requires_calibration():
     try: filters_for_effects([effect])
     except ValueError: pass
     else: raise AssertionError("Webcam punch-in exige área calibrada")
+
+
+def test_local_llm_is_off_without_model():
+    llm = LocalLLM()
+    assert not llm.enabled and not llm.available() and llm.classify_excerpt("teste") is None
