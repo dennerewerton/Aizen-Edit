@@ -1,5 +1,5 @@
 def make_edl(source: str, highlights: list[dict], fps_rational: str, subtitles: str | None = None) -> dict:
-    segments = [{"source": source, "start": h["start"], "end": h["end"], "reason": h["reason"], "score": h["score"], "highlight_id": h["id"]} for h in highlights if h.get("selected", True)]
+    segments = [{"source": source, "start": h["start"], "end": h["end"], "reason": h["reason"], "score": h["score"], "highlight_id": h["id"], "effects": h.get("effects", [])} for h in highlights if h.get("selected", True)]
     return {"version": 1, "fps_rational": fps_rational, "segments": segments, "subtitles": subtitles, "total_duration": edl_duration(segments)}
 
 

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from .core.audio import analyze_audio
 from .core.captions import build_srt
 from .core.edl import make_edl
+from .core.effects import validate_effect
 from .core.gameplay import analyze_gameplay, build_activity_score, detect_events
 from .core.highlights import build_highlights
 from .core.jobs import JobManager
@@ -86,6 +87,8 @@ def analyze(request: ProjectRequest):
 @app.post("/api/edl")
 def save_edl(request: HighlightsRequest):
     project = folder(request.project); source = read_json(project / "source.json")
+    for highlight in request.highlights:
+        highlight["effects"] = [validate_effect(effect) for effect in highlight.get("effects", [])]
     write_json(project / "highlights.json", request.highlights)
     settings = read_json(project / "settings.json", {}); transcript = read_json(project / "transcript.json", {"segments": []})
     caption_mode = settings.get("captions", "Nenhuma")
@@ -105,7 +108,7 @@ def render_video(kind: str, request: ProjectRequest):
     if not edl: raise HTTPException(400, "Gere o EDL antes de renderizar.")
     def work(job):
         output = project / f"{kind}.mp4"; job.update("Renderizando segmentos", 5)
-        render(Path(source["path"]), edl, output, 720 if kind == "preview" else None, has_audio=bool(source["audio"]), cancelled=job.cancelled, progress=lambda n, total: job.update("Renderizando segmentos", 5 + int(80 * n / total)))
+        render(Path(source["path"]), edl, output, 720 if kind == "preview" else None, has_audio=bool(source["audio"]), cancelled=job.cancelled, progress=lambda n, total: job.update("Renderizando segmentos", 5 + int(80 * n / total)), layout=load_layout(project), output_size=(source["width"], source["height"]))
         if job.cancelled.is_set(): return {}
         job.update("Verificando saída", 92); verification = verify_render(output, source["fps"]); write_json(project / f"{kind}_verify.json", verification)
         return {"file": f"{kind}.mp4", "verification": verification}

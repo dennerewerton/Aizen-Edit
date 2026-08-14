@@ -1,4 +1,5 @@
 from app.core.edl import edl_duration, make_edl
+from app.core.effects import filters_for_effects, validate_effect
 from app.core.captions import build_srt, srt_timestamp
 from app.core.gameplay import normalized_to_pixels
 from app.core.gameplay import build_activity_score
@@ -93,3 +94,18 @@ def test_captions_use_output_timeline_offsets(tmp_path):
 def test_activity_score_combines_motion_audio_and_speech():
     score = build_activity_score([{"time": 1, "motion": .8}], [{"time": 1, "energy": .5}], {"segments": [{"start": .5, "end": 1.5}]})
     assert score == [{"time": 1, "activity": .75, "motion": .8, "audio": .5, "speech": 1.0}]
+
+
+def test_effects_are_validated_and_generate_filters():
+    effect = validate_effect({"type": "slow_motion", "start": 0, "end": 2})
+    video, audio = filters_for_effects([effect])
+    assert "setpts=1.5*PTS" in video and "atempo=0.666667" in audio
+    video, _ = filters_for_effects([{"type": "punch_zoom", "start": 0, "end": 1}], output_size=(1920, 1080))
+    assert "scale=1920:1080" in video
+
+
+def test_webcam_effect_requires_calibration():
+    effect = {"type": "webcam_punch_in", "start": 0, "end": 1}
+    try: filters_for_effects([effect])
+    except ValueError: pass
+    else: raise AssertionError("Webcam punch-in exige área calibrada")

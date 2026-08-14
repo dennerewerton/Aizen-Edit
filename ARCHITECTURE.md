@@ -26,6 +26,7 @@ Análise e renderização são jobs locais em background. A interface consulta o
 - `edl`: decisões editáveis e duração derivada.
 - `captions`: SRT local com timestamps rebaseados para a timeline de saída; as legendas são aplicadas após a concatenação.
 - `renderer`: extração por segmento com fades, concatenação, preview/final e preservação de FPS.
+- `effects`: filtros FFmpeg declarativos e opt-in (zoom, webcam, freeze, câmera lenta e texto), associados a EDLs revisados.
 - `verify`: FFprobe do resultado e checagens de integridade.
 - `jobs`: estado/cancelamento para operações longas, sem serviço externo.
 - `layout` e `thumbnails`: calibração normalizada do HUD e revisão visual de highlights.

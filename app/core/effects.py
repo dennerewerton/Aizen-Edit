@@ -16,3 +16,28 @@ def validate_effect(effect: dict) -> dict:
         raise ValueError("O efeito precisa ter duração positiva.")
     return {**effect, "type": kind, "start": start, "end": end}
 
+
+def filters_for_effects(effects: list[dict], layout: dict | None = None, output_size: tuple[int, int] | None = None) -> tuple[list[str], list[str]]:
+    """Return FFmpeg video/audio filters for opt-in effects on one EDL segment."""
+    video, audio = [], []
+    target = f"{output_size[0]}:{output_size[1]}" if output_size else "iw:ih"
+    for effect in effects:
+        kind = effect["type"]
+        if kind == "punch_zoom":
+            video += ["crop=trunc(iw/1.12/2)*2:trunc(ih/1.12/2)*2:(iw-ow)/2:(ih-oh)/2", f"scale={target}"]
+        elif kind == "webcam_punch_in":
+            region = (layout or {}).get("regions", {}).get("webcam")
+            if not region: raise ValueError("Configure a webcam antes de usar Webcam Punch-In.")
+            video += [f"crop=trunc(iw*{region['width']}/2)*2:trunc(ih*{region['height']}/2)*2:iw*{region['x']}:ih*{region['y']}", f"scale={target}"]
+        elif kind == "freeze_frame":
+            video.append("tpad=stop_mode=clone:stop_duration=0.5")
+            audio.append("apad=pad_dur=0.5")
+        elif kind == "slow_motion":
+            video.append("setpts=1.5*PTS")
+            audio.append("atempo=0.666667")
+        elif kind == "text":
+            message = str(effect.get("text", ""))
+            if not message: raise ValueError("O efeito de texto precisa de uma mensagem.")
+            safe = message.replace("'", r"\'").replace(":", r"\:")
+            video.append(f"drawtext=text='{safe}':x=(w-text_w)/2:y=h*0.12:fontsize=h/18:fontcolor=white:borderw=3:bordercolor=black")
+    return video, audio
