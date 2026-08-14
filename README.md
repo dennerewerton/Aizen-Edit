@@ -37,6 +37,8 @@ Foi validado o pipeline completo com `C:\Users\Aizen\Videos\2026-08-07 11-23-25.
 
 Quando há uma duração definida, o editor prioriza os highlights de maior score até o limite aproximado e sempre os organiza na ordem cronológica da gameplay.
 
+Ao salvar a EDL, o app valida os limites ajustados manualmente e registra decisões de manter, remover ou favoritar em `feedback.jsonl` para aprendizagem futura.
+
 O vídeo original nunca é modificado. Cada projeto vai para `projects/<vídeo>-<id>/`; ali ficam `source.json`, transcrições, análise, highlights, `edl.json`, `preview.mp4`, `final.mp4`, validações e feedback.
 
 `log.txt` registra etapas importantes do projeto, como transcrição, análise, EDL e renderização, sem inundar o terminal.

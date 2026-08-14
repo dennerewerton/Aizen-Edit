@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from .core.audio import analyze_audio
 from .core.captions import build_srt
-from .core.edl import make_edl
+from .core.edl import make_edl, validate_highlights
 from .core.effects import validate_effect
 from .core.gameplay import analyze_gameplay, build_activity_score, detect_events, detect_outcome_candidates
 from .core.highlights import build_highlights
@@ -118,6 +118,8 @@ def analyze(request: ProjectRequest):
 @app.post("/api/edl")
 def save_edl(request: HighlightsRequest):
     project = folder(request.project); source = read_json(project / "source.json")
+    try: validate_highlights(request.highlights, source["duration"])
+    except ValueError as error: raise HTTPException(400, str(error)) from error
     for highlight in request.highlights:
         highlight["effects"] = [validate_effect(effect) for effect in highlight.get("effects", [])]
     write_json(project / "highlights.json", request.highlights)
@@ -132,7 +134,9 @@ def save_edl(request: HighlightsRequest):
     write_json(project / "edl.json", edl)
     append_log(project, f"EDL salva: {len(edl['segments'])} segmentos, {edl['total_duration']} s")
     with (project / "feedback.jsonl").open("a", encoding="utf-8") as output:
-        for h in request.highlights: output.write(json.dumps({"highlight_id": h["id"], "decision": "keep" if h.get("selected") else "remove", "features": {"score": h["score"], "events": h["events"]}}, ensure_ascii=False) + "\n")
+        for h in request.highlights:
+            decision = "favorite" if h.get("favorite") else ("keep" if h.get("selected") else "remove")
+            output.write(json.dumps({"highlight_id": h["id"], "decision": decision, "features": {"score": h["score"], "events": h["events"]}}, ensure_ascii=False) + "\n")
     return edl
 
 

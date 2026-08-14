@@ -13,3 +13,11 @@ def make_edl(source: str, highlights: list[dict], fps_rational: str, subtitles: 
 
 def edl_duration(segments: list[dict]) -> float:
     return round(sum(max(0, s["end"] - s["start"]) for s in segments), 3)
+
+
+def validate_highlights(highlights: list[dict], source_duration: float) -> None:
+    for highlight in highlights:
+        if not highlight.get("selected", True): continue
+        start, end = float(highlight["start"]), float(highlight["end"])
+        if start < 0 or end > source_duration + .001 or end <= start:
+            raise ValueError(f"Highlight {highlight.get('id', '?')} possui intervalo inválido.")
