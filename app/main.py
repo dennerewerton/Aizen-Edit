@@ -21,7 +21,7 @@ from .core.probe import probe_video
 from .core.project import create_project, read_json, write_json
 from .core.renderer import render
 from .core.speech import transcript_events
-from .core.thumbnails import create_thumbnail
+from .core.thumbnails import create_frame, create_thumbnail
 from .core.transcription import transcribe_local
 from .core.verify import verify_render
 
@@ -161,6 +161,15 @@ def source_media(project: str):
     item = Path(source["path"])
     if not item.is_file(): raise HTTPException(404, "Vídeo de origem não encontrado.")
     return FileResponse(item)
+
+
+@app.post("/api/calibration-frame")
+def calibration_frame(request: ProjectRequest):
+    project = folder(request.project); source = read_json(project / "source.json")
+    frame = project / "calibration.jpg"
+    if not frame.exists() and not create_frame(Path(source["path"]), source["duration"] / 2, frame, 960):
+        raise HTTPException(500, "Não foi possível extrair um frame para calibração.")
+    return {"file": "calibration.jpg"}
 
 
 @app.get("/api/layout")

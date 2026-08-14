@@ -42,7 +42,7 @@ O detector de possível abate/morte é conservador: ele depende de atividade de 
 
 ## Calibração de layout
 
-A página **Configurar layout do Free Fire** salva webcam, placar, kill feed, HP, minimapa e centro de gameplay como regiões normalizadas. Preencha `x`, `y`, `w` e `h` de 0 a 1; nenhuma posição é fixada no código.
+A página **Configurar layout do Free Fire** extrai um frame, permite escolher webcam, placar, kill feed, HP, minimapa ou centro de gameplay e desenhar o retângulo diretamente sobre a imagem. Os campos `x`, `y`, `w` e `h` continuam visíveis para ajustes finos; nenhuma posição é fixada no código.
 
 ## Estrutura
 

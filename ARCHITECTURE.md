@@ -29,7 +29,7 @@ Análise e renderização são jobs locais em background. A interface consulta o
 - `effects`: filtros FFmpeg declarativos e opt-in (zoom, webcam, freeze, câmera lenta e texto), associados a EDLs revisados.
 - `verify`: FFprobe do resultado e checagens de integridade.
 - `jobs`: estado/cancelamento para operações longas, sem serviço externo.
-- `layout` e `thumbnails`: calibração normalizada do HUD e revisão visual de highlights.
+- `layout` e `thumbnails`: calibração normalizada do HUD por canvas/frame extraído e revisão visual de highlights.
 
 ## Hardware e dependências
 
