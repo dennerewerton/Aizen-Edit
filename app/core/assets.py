@@ -8,7 +8,7 @@ SFX_EXTENSIONS = {".wav", ".mp3", ".aac", ".m4a", ".ogg", ".flac"}
 
 
 def list_sfx() -> list[str]:
-    if not SFX_DIRECTORY.exists(): return []
+    SFX_DIRECTORY.mkdir(parents=True, exist_ok=True)
     return sorted(item.name for item in SFX_DIRECTORY.iterdir() if item.is_file() and item.suffix.lower() in SFX_EXTENSIONS)
 
 
