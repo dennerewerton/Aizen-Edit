@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .core.audio import analyze_audio
+from .core.assets import list_sfx, sfx_path
 from .core.captions import build_srt
 from .core.edl import make_edl, validate_highlights
 from .core.effects import validate_effect
@@ -60,6 +61,10 @@ def load_video(request: VideoRequest):
 
 @app.get("/api/projects")
 def list_projects(): return recent_projects()
+
+
+@app.get("/api/assets/sfx")
+def available_sfx(): return list_sfx()
 
 
 @app.get("/api/project")
@@ -136,6 +141,8 @@ def save_edl(request: HighlightsRequest):
     effect_flags = read_json(CONFIG / "freefire.json")["effects"]
     for highlight in request.highlights:
         try: highlight["effects"] = [validate_effect(effect, effect_flags) for effect in highlight.get("effects", [])]
+        except ValueError as error: raise HTTPException(400, str(error)) from error
+        try: highlight["sfx"] = sfx_path(highlight.get("sfx")).name if highlight.get("sfx") else None
         except ValueError as error: raise HTTPException(400, str(error)) from error
     write_json(project / "highlights.json", request.highlights)
     settings = read_json(project / "settings.json", {}); transcript = read_json(project / "transcript.json", {"segments": []})

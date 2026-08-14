@@ -13,6 +13,7 @@ from app.core.project import source_signature
 from app.core.project import append_log
 from app.core import project as project_module
 from app.core.project import recent_projects
+from app.core import assets as assets_module
 from app.core.probe import _ratio
 from app.core.ranking import score_event
 from app.core.renderer import segment_command, subtitle_style
@@ -62,6 +63,17 @@ def test_recent_projects_are_ordered_and_resumable(tmp_path, monkeypatch):
         (folder / "source.json").write_text('{"name":"' + name + '"}', encoding="utf-8")
         (folder / "project.json").write_text('{"updated_at":"' + updated + '"}', encoding="utf-8")
     assert [item["name"] for item in recent_projects()] == ["new", "old"]
+
+
+def test_sfx_catalog_is_local_and_rejects_path_traversal(tmp_path, monkeypatch):
+    monkeypatch.setattr(assets_module, "SFX_DIRECTORY", tmp_path)
+    (tmp_path / "hit.wav").write_bytes(b"sound")
+    (tmp_path / "notes.txt").write_text("no", encoding="utf-8")
+    assert assets_module.list_sfx() == ["hit.wav"]
+    assert assets_module.sfx_path("hit.wav").name == "hit.wav"
+    try: assets_module.sfx_path("../notes.txt")
+    except ValueError: pass
+    else: raise AssertionError("Caminho externo de SFX deve falhar")
 
 
 def test_project_log_is_human_readable(tmp_path):

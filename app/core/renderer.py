@@ -2,6 +2,7 @@ import subprocess
 import time
 
 from .effects import filters_for_effects, windowed_video_filtergraph
+from .assets import sfx_path
 from pathlib import Path
 
 
@@ -16,12 +17,23 @@ def segment_command(source: Path, segment: dict, output: Path, fps: str, preview
     filters = effect_video + [f"fps={fps}"]
     if preview_height: filters.append(f"scale=-2:{preview_height}")
     graph = windowed_video_filtergraph(segment.get("effects", []), layout, fps, preview_height)
-    command = ["ffmpeg", "-y", "-ss", str(segment["start"]), "-i", str(source), "-t", str(duration)]
-    if graph: command += ["-filter_complex", graph, "-map", "[vout]", "-map", "0:a?"]
+    has_window_graph = graph is not None
+    sfx = sfx_path(segment.get("sfx"))
+    command = ["ffmpeg", "-y", "-ss", str(segment["start"]), "-i", str(source)]
+    if sfx: command += ["-i", str(sfx)]
+    command += ["-t", str(duration)]
+    audio_filters = effect_audio + [f"afade=t=in:st=0:d={fade}", f"afade=t=out:st={max(0, duration-fade)}:d={fade}"] if has_audio else []
+    if sfx and not has_audio: raise ValueError("SFX exige um vídeo de origem com áudio.")
+    if sfx:
+        audio_graph = f"[0:a]{','.join(audio_filters)}[source_audio];[source_audio][1:a]amix=inputs=2:duration=first:dropout_transition=0[aout]"
+        graph = ";".join(part for part in (graph, audio_graph) if part)
+    if graph:
+        command += ["-filter_complex", graph, "-map", "[vout]" if has_window_graph else "0:v:0", "-map", "[aout]" if sfx else "0:a?"]
+        if not has_window_graph: command += ["-vf", ",".join(filters)]
     else: command += ["-map", "0:v:0", "-map", "0:a?", "-vf", ",".join(filters)]
-    if has_audio:
-        audio_filters = effect_audio + [f"afade=t=in:st=0:d={fade}", f"afade=t=out:st={max(0, duration-fade)}:d={fade}"]
+    if has_audio and not sfx:
         command += ["-af", ",".join(audio_filters), "-c:a", "aac"]
+    elif sfx: command += ["-c:a", "aac"]
     command += ["-c:v", video_encoder]
     if video_encoder == "h264_amf": command += ["-quality", "quality", "-rc", "cqp", "-qp_i", "20", "-qp_p", "22"]
     else: command += ["-crf", "18", "-preset", "medium"]

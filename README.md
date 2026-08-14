@@ -56,6 +56,8 @@ A intensidade selecionada também é aplicada de fato: **Baixo**, **Médio** e *
 
 As chaves em `config/freefire.json` também são respeitadas ao salvar a EDL: se um tipo estiver desativado, o backend recusa essa associação de efeito de forma explícita.
 
+Para usar um som próprio, coloque um arquivo WAV, MP3, AAC, M4A, OGG ou FLAC em `assets/sfx/`, atualize a página e selecione-o no highlight. O som é misturado localmente no início desse trecho; nenhum arquivo é baixado nem escolhido automaticamente.
+
 O detector de possível abate/morte é conservador: ele depende de atividade de combate e de mudanças em regiões de kill feed ou HP que você calibrar. Sem essa calibração, o app mostrará combates e conversas, mas não inventará um abate.
 
 ## Calibração de layout
