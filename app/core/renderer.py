@@ -1,7 +1,7 @@
 import subprocess
 import time
 
-from .effects import filters_for_effects
+from .effects import filters_for_effects, windowed_video_filtergraph
 from pathlib import Path
 
 
@@ -15,7 +15,10 @@ def segment_command(source: Path, segment: dict, output: Path, fps: str, preview
     effect_video, effect_audio = filters_for_effects(segment.get("effects", []), layout, output_size)
     filters = effect_video + [f"fps={fps}"]
     if preview_height: filters.append(f"scale=-2:{preview_height}")
-    command = ["ffmpeg", "-y", "-ss", str(segment["start"]), "-i", str(source), "-t", str(duration), "-map", "0:v:0", "-map", "0:a?", "-vf", ",".join(filters)]
+    graph = windowed_video_filtergraph(segment.get("effects", []), layout, fps, preview_height)
+    command = ["ffmpeg", "-y", "-ss", str(segment["start"]), "-i", str(source), "-t", str(duration)]
+    if graph: command += ["-filter_complex", graph, "-map", "[vout]", "-map", "0:a?"]
+    else: command += ["-map", "0:v:0", "-map", "0:a?", "-vf", ",".join(filters)]
     if has_audio:
         audio_filters = effect_audio + [f"afade=t=in:st=0:d={fade}", f"afade=t=out:st={max(0, duration-fade)}:d={fade}"]
         command += ["-af", ",".join(audio_filters), "-c:a", "aac"]

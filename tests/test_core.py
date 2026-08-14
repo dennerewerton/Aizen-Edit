@@ -1,5 +1,5 @@
 from app.core.edl import edl_duration, make_edl, validate_highlights
-from app.core.effects import filters_for_effects, validate_effect
+from app.core.effects import filters_for_effects, validate_effect, windowed_video_filtergraph
 from app.core.captions import build_srt, srt_timestamp
 from app.core.gameplay import normalized_to_pixels, detect_outcome_candidates, save_debug_frames
 from app.core.gameplay import build_activity_score
@@ -131,8 +131,8 @@ def test_effects_are_validated_and_generate_filters():
     effect = validate_effect({"type": "slow_motion", "start": 0, "end": 2})
     video, audio = filters_for_effects([effect])
     assert "setpts=1.5*PTS" in video and "atempo=0.666667" in audio
-    video, _ = filters_for_effects([{"type": "punch_zoom", "start": 0, "end": 1}], output_size=(1920, 1080))
-    assert "scale=1920:1080" in video
+    graph = windowed_video_filtergraph([{"type": "punch_zoom", "start": 0, "end": 1}], None, "60/1", 720)
+    assert "overlay=0:0:enable='between(t,0,1)'" in graph and "scale=-2:720" in graph
 
 
 def test_webcam_effect_requires_calibration():
