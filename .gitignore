@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.py[cod]
+projects/*/
+!projects/.gitkeep
+.pytest_cache/
+
+sample-60fps.mp4

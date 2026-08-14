@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aizen-auto-editor"
+version = "0.1.0"
+description = "Editor local automático de Free Fire"
+requires-python = ">=3.11"
+dependencies = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1", "python-multipart>=0.0.20,<1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
