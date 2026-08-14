@@ -1,13 +1,31 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><title>Aizen Auto Editor</title><link rel="stylesheet" href="/static/style.css"></head>
-<body><main>
-<h1>Aizen Auto Editor <small>MVP local</small></h1><p>Selecione uma gameplay. O arquivo original nunca será alterado.</p>
-<section id="recent"><h2>Projetos recentes</h2><div id="recent-projects">Carregando projetos…</div></section>
-<section><label>Arquivo de vídeo <input id="path" placeholder="C:\\Vídeos\\gameplay.mp4"></label><button id="pick-video">Selecionar arquivo</button><div class="settings"><label>Edição <select id="edit"><option value="automatic">Automática</option><option>Mais dinâmica</option><option>Mais natural</option><option>Só melhores momentos</option></select></label><label>Efeitos <select id="effects"><option>Nenhum</option><option>Baixo</option><option selected>Médio</option><option>Alto</option></select></label><label>Legendas <select id="captions"><option>Nenhuma</option><option selected>Apenas momentos importantes</option><option>Todas as falas</option></select></label><label>Duração <select id="target-duration"><option value="automatic">Automática</option><option value="300">~5 minutos</option><option value="480">~8 minutos</option><option value="600">~10 minutos</option><option value="900">~15 minutos</option><option value="custom">Personalizada</option></select></label><label id="custom-duration-wrap" hidden>Minutos <input id="custom-duration" type="number" min="1" step="1" value="5"></label></div><button id="load">Carregar vídeo</button></section>
-<section id="info" hidden></section>
-<section id="actions" hidden><button id="analyze">Analisar vídeo</button><button id="edl" disabled>Gerar edição (EDL)</button><button id="preview" disabled>Gerar preview</button><button id="final" disabled>Renderizar final</button><button id="cancel" hidden>Cancelar operação</button></section>
-<section id="calibration" hidden><h2>Configurar layout do Free Fire</h2><p>Selecione uma região, desenhe sobre o frame e salve. Os valores normalizados funcionam em qualquer resolução.</p><label>Região a desenhar <select id="region-select"><option value="webcam">Webcam</option><option value="scoreboard">Placar</option><option value="kill_feed">Kill feed</option><option value="hp">HP</option><option value="minimap">Minimapa</option><option value="gameplay_center">Centro da gameplay</option></select></label><canvas id="calibration-canvas" aria-label="Frame para calibração"></canvas><div id="regions"></div><button id="save-layout">Salvar layout</button></section>
-<section><h2>Progresso</h2><ol id="log"><li>○ Aguardando vídeo</li></ol></section>
-<section id="results" hidden><h2>Melhores momentos</h2><p id="warning"></p><div id="timeline" class="timeline" aria-label="Timeline de atividade e highlights"></div><p class="timeline-legend">Atividade (azul), combate (vermelho), conversa/reação (roxo), highlights selecionados (amarelo).</p><div id="highlights"></div></section>
-<section id="player" hidden><h2>Player</h2><video controls></video></section>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aizen Auto Editor</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main>
+  <header class="app-header">
+    <div class="brand-mark" aria-hidden="true">A</div>
+    <div><p class="eyebrow">EDITOR LOCAL PARA FREE FIRE</p><h1>Aizen Auto Editor</h1></div>
+    <div class="local-status"><i></i> Processamento local</div>
+  </header>
+
+  <section class="hero"><div><p class="eyebrow">SEU FLUXO DE EDIÇÃO</p><h2>Da gameplay ao vídeo final,<br><span>sem sair do seu computador.</span></h2><p>Analise, revise e renderize vídeos para YouTube preservando sua gameplay original.</p></div><div class="workflow"><span>01<br><b>Selecionar</b></span><em>→</em><span>02<br><b>Analisar</b></span><em>→</em><span>03<br><b>Publicar</b></span></div></section>
+
+  <section id="recent" class="panel"><div class="panel-heading"><div><p class="eyebrow">CONTINUIDADE</p><h2>Projetos recentes</h2></div><span class="muted">Tudo salvo localmente</span></div><div id="recent-projects">Carregando projetos…</div></section>
+
+  <section class="panel source-panel"><div class="panel-heading"><div><p class="eyebrow">NOVA EDIÇÃO</p><h2>Escolha uma gameplay</h2></div><span class="muted">O original nunca é alterado</span></div><label class="file-field"><span>Arquivo de vídeo</span><div><input id="path" placeholder="C:\Vídeos\gameplay.mp4"><button id="pick-video" class="secondary">Procurar</button></div></label><div class="settings"><label><span>Estilo de edição</span><select id="edit"><option value="automatic">Automática</option><option>Mais dinâmica</option><option>Mais natural</option><option>Só melhores momentos</option></select></label><label><span>Intensidade</span><select id="effects"><option>Nenhum</option><option>Baixo</option><option selected>Médio</option><option>Alto</option></select></label><label><span>Legendas</span><select id="captions"><option>Nenhuma</option><option selected>Apenas momentos importantes</option><option>Todas as falas</option></select></label><label><span>Duração desejada</span><select id="target-duration"><option value="automatic">Automática</option><option value="300">~5 minutos</option><option value="480">~8 minutos</option><option value="600">~10 minutos</option><option value="900">~15 minutos</option><option value="custom">Personalizada</option></select></label><label id="custom-duration-wrap" hidden><span>Minutos</span><input id="custom-duration" type="number" min="1" step="1" value="5"></label></div><button id="load" class="primary">Carregar vídeo <span>→</span></button></section>
+
+  <section id="info" class="panel video-info" hidden></section>
+  <section id="actions" class="action-bar" hidden><button id="analyze" class="primary">Analisar vídeo</button><button id="edl" disabled>Montar edição</button><button id="preview" disabled>Gerar preview</button><button id="final" disabled>Renderizar final</button><button id="cancel" class="danger" hidden>Cancelar operação</button></section>
+
+  <section id="calibration" class="panel" hidden><div class="panel-heading"><div><p class="eyebrow">CALIBRAÇÃO</p><h2>Layout do Free Fire</h2></div></div><p class="muted">Desenhe as regiões no frame. As coordenadas são normalizadas para funcionar em outras resoluções.</p><label>Região a desenhar <select id="region-select"><option value="webcam">Webcam</option><option value="scoreboard">Placar</option><option value="kill_feed">Kill feed</option><option value="hp">HP</option><option value="minimap">Minimapa</option><option value="gameplay_center">Centro da gameplay</option></select></label><canvas id="calibration-canvas" aria-label="Frame para calibração"></canvas><div id="regions"></div><button id="save-layout" class="secondary">Salvar layout</button></section>
+
+  <section class="panel progress-panel"><div class="panel-heading"><div><p class="eyebrow">ACOMPANHAMENTO</p><h2>Progresso</h2></div></div><ol id="log"><li>○ Aguardando vídeo</li></ol></section>
+  <section id="results" class="panel" hidden><div class="panel-heading"><div><p class="eyebrow">REVISÃO</p><h2>Melhores momentos</h2></div></div><p id="warning" class="warning"></p><div id="timeline" class="timeline" aria-label="Timeline de atividade e highlights"></div><p class="timeline-legend">Atividade (azul), combate (vermelho), conversa/reação (roxo), highlights selecionados (amarelo).</p><div id="highlights"></div></section>
+  <section id="player" class="panel" hidden><div class="panel-heading"><div><p class="eyebrow">REPRODUÇÃO</p><h2>Player</h2></div></div><video controls></video></section>
 </main><script src="/static/app.js"></script></body></html>

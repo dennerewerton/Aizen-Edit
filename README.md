@@ -36,6 +36,10 @@ Foi validado o pipeline completo com `C:\Users\Aizen\Videos\2026-08-07 11-23-25.
 5. Clique em **Analisar vídeo**, revise os momentos e desmarque os indesejados.
 6. Clique em **Gerar edição (EDL)**, depois **Gerar preview** ou **Renderizar final**.
 
+## Aplicativo Windows
+
+Para abrir em uma janela nativa, sem terminal e sem precisar abrir o navegador, use **`Aizen Auto Editor.bat`**. Para gerar um executável distribuível, execute `build-windows.bat`; o resultado fica em `dist\Aizen Auto Editor\Aizen Auto Editor.exe`.
+
 Quando há uma duração definida, o editor prioriza os highlights de maior score até o limite aproximado e sempre os organiza na ordem cronológica da gameplay.
 
 O tipo de edição influencia a sugestão: **Mais dinâmica** encurta o contexto e agrupamento; **Mais natural** preserva mais preparação e consequência; **Só melhores momentos** eleva o limiar de seleção. A edição automática usa os valores padrão do Free Fire em `config/freefire.json`.

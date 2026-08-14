@@ -1,9 +1,9 @@
 """Safe discovery of optional, user-owned local assets."""
 from pathlib import Path
 
-from .paths import ROOT
+from .paths import ASSETS
 
-SFX_DIRECTORY = ROOT / "assets" / "sfx"
+SFX_DIRECTORY = ASSETS / "sfx"
 SFX_EXTENSIONS = {".wav", ".mp3", ".aac", ".m4a", ".ogg", ".flac"}
 
 
