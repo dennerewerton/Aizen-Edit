@@ -6,7 +6,9 @@ Editor local para transformar gameplays longas de Free Fire em uma sugestão de 
 
 O fluxo já está implementado: carregar vídeo → FFprobe → transcrição local opcional → análise leve de áudio/movimento → candidatos de combate v1 → highlights revisáveis → EDL → preview/final FFmpeg → validação de FPS, áudio e duração. Análise e renderização mostram etapa/porcentagem e podem ser canceladas.
 
-O detector de combate é heurístico v1 (movimento + energia de áudio). A transcrição também gera candidatos determinísticos de conversa, reação, provocação e pausa. Kill feed/OCR, mortes, reações faciais, legendas e efeitos temporizados são extensões planejadas, não promessas concluídas.
+O detector de combate é heurístico (movimento + energia de áudio + HUD) e adapta o limite à faixa de atividade de cada gravação, sem transformar menus uniformemente quietos em combate. A transcrição também gera candidatos determinísticos de conversa, reação, provocação, chamadas curtas de Free Fire e pausa. Falas genéricas têm contribuição limitada para não criarem highlights longos apenas pelo acúmulo de frases.
+
+As partes mortas são detectadas somente quando a baixa atividade é sustentada e coincide em vários sinais: pouco movimento, áudio baixo, ausência de fala e ausência de mudança relevante no HUD. Essas zonas separam highlights próximos e aparam o excesso de contexto; silêncio isolado durante combate não é cortado. Cadeias longas de eventos são divididas em clipes menores e os contextos vizinhos não repetem os mesmos frames.
 
 ## Instalação no Windows
 

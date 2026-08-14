@@ -2,8 +2,6 @@ from pathlib import Path
 
 import cv2
 
-import cv2
-
 
 def normalized_to_pixels(region: dict, width: int, height: int) -> dict:
     return {"x": round(region["x"] * width), "y": round(region["y"] * height), "width": round(region["width"] * width), "height": round(region["height"] * height)}
@@ -49,12 +47,23 @@ def _hud_changes(frame, previous: dict, regions: dict) -> tuple[dict, dict]:
 
 def detect_events(visual: list[dict], audio: list[dict], threshold: float = 0.55) -> list[dict]:
     audio_by_time = {round(item["time"]): item["energy"] for item in audio}
-    events = []
+    scored = []
     for point in visual:
         sound = audio_by_time.get(round(point["time"]), 0.0)
-        combat = 0.65 * point["motion"] + 0.35 * sound
         hud = point.get("hud", {})
-        if combat >= threshold:
+        scored.append(.6 * point["motion"] + .3 * sound + .1 * max(hud.values(), default=0.0))
+    # Recordings, capture cards and microphones have very different ranges. Use
+    # the upper activity band of this recording while keeping a conservative
+    # floor so a uniformly quiet menu is not mislabeled as combat.
+    ordered = sorted(scored)
+    upper_band = ordered[min(len(ordered) - 1, int(len(ordered) * .82))] if ordered else threshold
+    adaptive_threshold = min(threshold, max(threshold * .45, upper_band))
+    events = []
+    for point, combat in zip(visual, scored):
+        sound = audio_by_time.get(round(point["time"]), 0.0)
+        hud = point.get("hud", {})
+        visual_confirmation = point["motion"] >= .075 or max(hud.values(), default=0.0) >= .12
+        if combat >= adaptive_threshold and visual_confirmation:
             events.append({"start": point["time"], "end": point["time"] + 1.0, "type": "combat", "confidence": round(combat, 3), "signals": {"motion": point["motion"], "audio": sound, "speech": 0.0, "kill_feed": hud.get("kill_feed", 0.0), "hp": hud.get("hp", 0.0)}})
         elif combat < 0.08:
             events.append({"start": point["time"], "end": point["time"] + 1.0, "type": "idle", "confidence": round(1 - combat, 3), "signals": {"motion": point["motion"], "audio": sound, "speech": 0.0, "kill_feed": hud.get("kill_feed", 0.0), "hp": hud.get("hp", 0.0)}})
@@ -115,5 +124,36 @@ def build_activity_score(visual: list[dict], audio: list[dict], transcript: dict
         speech = any(float(segment["start"]) <= time <= float(segment["end"]) for segment in transcript.get("segments", []))
         sound = audio_by_time.get(round(time), 0.0)
         activity = min(1.0, .5 * point["motion"] + .3 * sound + .2 * float(speech))
-        result.append({"time": time, "activity": round(activity, 4), "motion": point["motion"], "audio": sound, "speech": float(speech)})
+        item = {"time": time, "activity": round(activity, 4), "motion": point["motion"], "audio": sound, "speech": float(speech)}
+        if point.get("hud"): item["hud"] = max(point["hud"].values(), default=0.0)
+        result.append(item)
     return result
+
+
+def detect_dead_zones(activity: list[dict], settings: dict) -> list[dict]:
+    """Detect sustained inactivity using image, audio, speech and calibrated HUD.
+
+    Silence alone is deliberately insufficient: a silent fight with movement or
+    HUD changes must never become a dead zone.
+    """
+    if not activity: return []
+    ordered = sorted(activity, key=lambda point: point["time"])
+    gaps = [b["time"] - a["time"] for a, b in zip(ordered, ordered[1:]) if b["time"] > a["time"]]
+    sample = sorted(gaps)[len(gaps) // 2] if gaps else 1.0
+    maximum_gap = sample * 1.5
+    runs, current = [], []
+    for point in ordered:
+        quiet = (point.get("activity", 1) <= settings["max_activity"] and point.get("motion", 1) <= settings["max_motion"] and point.get("audio", 1) <= settings["max_audio"] and point.get("speech", 0) == 0 and point.get("hud", 0) <= settings.get("max_hud", .12))
+        contiguous = not current or point["time"] - current[-1]["time"] <= maximum_gap
+        if quiet and contiguous: current.append(point)
+        else:
+            if current: runs.append(current)
+            current = [point] if quiet else []
+    if current: runs.append(current)
+    zones = []
+    for run in runs:
+        start, end = run[0]["time"], run[-1]["time"] + sample
+        if end - start < settings["minimum_seconds"]: continue
+        mean_activity = sum(point["activity"] for point in run) / len(run)
+        zones.append({"start": round(start, 3), "end": round(end, 3), "type": "dead_zone", "confidence": round(1 - mean_activity, 3), "signals": {"motion": round(sum(point["motion"] for point in run) / len(run), 3), "audio": round(sum(point["audio"] for point in run) / len(run), 3), "speech": 0.0}, "reason": "baixa atividade visual e sonora, sem fala ou mudança de HUD"})
+    return zones

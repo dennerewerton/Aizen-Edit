@@ -8,7 +8,7 @@ def make_edl(source: str, highlights: list[dict], fps_rational: str, subtitles: 
             if remaining <= 0: break
             if duration <= remaining:
                 picked.append(highlight); used += duration
-            elif not picked:
+            elif remaining >= .5:
                 clipped = dict(highlight); middle = (highlight["start"] + highlight["end"]) / 2
                 clipped["start"], clipped["end"] = middle - remaining / 2, middle + remaining / 2
                 picked.append(clipped); used += remaining

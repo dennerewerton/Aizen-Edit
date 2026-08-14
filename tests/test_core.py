@@ -1,7 +1,7 @@
 from app.core.edl import automatic_target_duration, edl_duration, make_edl, validate_highlights
 from app.core.effects import filters_for_effects, validate_effect, windowed_video_filtergraph
 from app.core.captions import build_srt, srt_timestamp
-from app.core.gameplay import normalized_to_pixels, detect_outcome_candidates, save_debug_frames
+from app.core.gameplay import normalized_to_pixels, detect_dead_zones, detect_events, detect_outcome_candidates, save_debug_frames
 from app.core.gameplay import build_activity_score
 from app.core.audio import _times
 from app.core.highlights import group_events
@@ -32,6 +32,17 @@ def test_normalized_coordinates():
 def test_group_events():
     events = [{"start": 10, "end": 11, "type": "combat"}, {"start": 14, "end": 15, "type": "kill"}, {"start": 30, "end": 31, "type": "combat"}]
     assert [len(x) for x in group_events(events, 5)] == [2, 1]
+
+
+def test_dead_zone_separates_nearby_events():
+    events = [{"start": 10, "end": 11, "type": "combat"}, {"start": 14, "end": 15, "type": "reaction"}]
+    zones = [{"start": 11, "end": 14, "type": "dead_zone"}]
+    assert [len(group) for group in group_events(events, 5, zones)] == [1, 1]
+
+
+def test_event_chain_is_split_at_editorial_maximum():
+    events = [{"start": time, "end": time + 1, "type": "combat"} for time in (0, 4, 8, 12)]
+    assert [len(group) for group in group_events(events, 5, max_span=10)] == [3, 1]
 
 
 def test_ranking():
@@ -101,6 +112,13 @@ def test_edl_uses_score_budget_but_keeps_source_order():
     assert [segment["highlight_id"] for segment in edl["segments"]] == ["early", "late"]
 
 
+def test_edl_fills_remaining_budget_with_next_best_highlight():
+    highlights = [{"id":"best","start":20,"end":28,"reason":"combat","score":10,"selected":True}, {"id":"second","start":0,"end":8,"reason":"reaction","score":9,"selected":True}, {"id":"filler","start":10,"end":12,"reason":"conversation","score":1,"selected":True}]
+    edl = make_edl("x.mp4", highlights, "60/1", target_duration=12)
+    assert {segment["highlight_id"] for segment in edl["segments"]} == {"best", "second"}
+    assert edl_duration(edl["segments"]) == 12
+
+
 def test_short_source_uses_proportional_target_and_clips_single_long_segment():
     settings = {"short_video_max_seconds": 120, "short_video_target_ratio": .6, "short_video_min_target_seconds": 2}
     target = automatic_target_duration(10, settings)
@@ -152,6 +170,19 @@ def test_transcript_events_detect_reaction_and_pause():
     assert [event["type"] for event in events] == ["reaction", "idle", "trash_talk"]
 
 
+def test_transcript_events_promote_free_fire_callouts_and_reduce_filler():
+    events = transcript_events({"segments": [{"start": 0, "end": 1, "text": "Tá ali, tá ali"}, {"start": 1, "end": 2, "text": "entendi"}]})
+    assert events[0]["type"] == "reaction" and events[0]["signals"]["speech_interest"] >= .8
+    assert events[1]["type"] == "conversation" and events[1]["confidence"] < .2
+
+
+def test_adaptive_combat_threshold_finds_relative_action_burst():
+    visual = [{"time": time, "motion": .02} for time in range(9)] + [{"time": 9, "motion": .4}]
+    audio = [{"time": time, "energy": .04} for time in range(9)] + [{"time": 9, "energy": .5}]
+    assert [event["start"] for event in detect_events(visual, audio, .55) if event["type"] == "combat"] == [9]
+    assert not [event for event in detect_events(visual[:-1], audio[:-1], .55) if event["type"] == "combat"]
+
+
 def test_captions_use_output_timeline_offsets(tmp_path):
     output = tmp_path / "captions.srt"
     count = build_srt({"segments": [{"start": 11, "end": 12, "text": "nossa!"}]}, [{"start": 10, "end": 15}, {"start": 20, "end": 25}], output, "all")
@@ -168,6 +199,14 @@ def test_empty_caption_selection_removes_stale_subtitle_file(tmp_path):
 def test_activity_score_combines_motion_audio_and_speech():
     score = build_activity_score([{"time": 1, "motion": .8}], [{"time": 1, "energy": .5}], {"segments": [{"start": .5, "end": 1.5}]})
     assert score == [{"time": 1, "activity": .75, "motion": .8, "audio": .5, "speech": 1.0}]
+
+
+def test_dead_zone_requires_sustained_multi_signal_inactivity():
+    settings = {"minimum_seconds": 2, "max_activity": .2, "max_motion": .16, "max_audio": .18, "max_hud": .12}
+    quiet = [{"time": time, "activity": .04, "motion": .02, "audio": .1, "speech": 0.0} for time in (0, 1, 2)]
+    assert detect_dead_zones(quiet, settings)[0]["end"] == 3
+    quiet[1]["motion"] = .8
+    assert not detect_dead_zones(quiet, settings)
 
 
 def test_effects_are_validated_and_generate_filters():
@@ -211,6 +250,28 @@ def test_short_video_highlights_use_shorter_context():
     event = {"start": 5, "end": 6, "type": "combat", "confidence": 1, "signals": {"motion": 1, "audio": 1}}
     highlight = build_highlights([event], {"combat": 4, "motion": 2, "audio": 2, "confidence": 1}, settings, 10)[0]
     assert highlight["start"] == 4 and highlight["end"] == 7
+
+
+def test_dead_zones_trim_highlight_context():
+    settings = {"pre_context_seconds": 3, "post_context_seconds": 3, "merge_gap_seconds": 5, "minimum_score": 0}
+    event = {"start": 10, "end": 11, "type": "combat", "confidence": 1, "signals": {"motion": 1, "audio": 1}}
+    zones = [{"start": 7, "end": 9, "type": "dead_zone"}, {"start": 12, "end": 14, "type": "dead_zone"}]
+    highlight = build_highlights([event], {"combat": 4, "motion": 2, "audio": 2, "confidence": 1}, settings, 20, zones)[0]
+    assert highlight["start"] == 9 and highlight["end"] == 12
+
+
+def test_repeated_generic_conversation_does_not_inflate_highlight_score():
+    settings = {"pre_context_seconds": 3, "post_context_seconds": 3, "merge_gap_seconds": 5, "minimum_score": 2, "max_conversation_events": 3}
+    events = [{"start": time, "end": time + .5, "type": "conversation", "confidence": .18, "signals": {"speech": 1}} for time in range(10)]
+    weights = {"conversation": 1.5, "confidence": 1}
+    assert build_highlights(events, weights, settings, 20) == []
+
+
+def test_adjacent_highlight_context_is_not_rendered_twice():
+    settings = {"pre_context_seconds": 3, "post_context_seconds": 3, "merge_gap_seconds": 1, "minimum_score": 0}
+    events = [{"start": 5, "end": 6, "type": "combat", "confidence": 1, "signals": {}}, {"start": 8, "end": 9, "type": "combat", "confidence": 1, "signals": {}}]
+    highlights = sorted(build_highlights(events, {"combat": 4}, settings, 15), key=lambda item: item["start"])
+    assert highlights[0]["end"] == highlights[1]["start"]
 
 
 def test_edit_type_changes_highlight_context_and_threshold():

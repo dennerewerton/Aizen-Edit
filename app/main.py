@@ -13,11 +13,11 @@ from .core.assets import list_sfx, sfx_path
 from .core.captions import build_srt
 from .core.edl import automatic_target_duration, make_edl, validate_highlights
 from .core.effects import validate_effect
-from .core.gameplay import analyze_gameplay, build_activity_score, detect_events, detect_outcome_candidates, save_debug_frames
+from .core.gameplay import analyze_gameplay, build_activity_score, detect_dead_zones, detect_events, detect_outcome_candidates, save_debug_frames
 from .core.highlights import build_highlights, style_highlight_settings
 from .core.jobs import JobManager
 from .core.layout import load_layout, save_layout
-from .core.paths import CONFIG, ROOT
+from .core.paths import CONFIG, PROJECTS, ROOT
 from .core.probe import probe_video
 from .core.project import append_log, create_project, read_json, recent_projects, write_json
 from .core.renderer import render
@@ -40,7 +40,7 @@ class LayoutRequest(BaseModel): project: str; layout: dict
 
 def folder(value: str) -> Path:
     candidate = Path(value).resolve()
-    projects = (ROOT / "projects").resolve()
+    projects = PROJECTS.resolve()
     if not candidate.is_dir() or not candidate.is_relative_to(projects): raise HTTPException(400, "Projeto inválido.")
     return candidate
 
@@ -70,7 +70,7 @@ def available_sfx(): return list_sfx()
 @app.get("/api/project")
 def open_project(project: str):
     base = folder(project)
-    return {"project": str(base), "source": read_json(base / "source.json"), "settings": read_json(base / "settings.json", {}), "layout": load_layout(base), "highlights": read_json(base / "highlights.json", []), "events": read_json(base / "gameplay_events.json", []), "activity": read_json(base / "activity_score.json", []), "has_edl": (base / "edl.json").exists()}
+    return {"project": str(base), "source": read_json(base / "source.json"), "settings": read_json(base / "settings.json", {}), "layout": load_layout(base), "highlights": read_json(base / "highlights.json", []), "events": read_json(base / "gameplay_events.json", []), "activity": read_json(base / "activity_score.json", []), "dead_zones": read_json(base / "dead_zones.json", []), "has_edl": (base / "edl.json").exists()}
 
 
 @app.post("/api/pick-video")
@@ -116,19 +116,20 @@ def analyze(request: ProjectRequest):
             write_json(project / "visual_features.json", visual)
             state["analysis_signature"] = analysis_signature; write_json(project / "project.json", state)
         activity = build_activity_score(visual, audio, transcript); write_json(project / "activity_score.json", activity)
+        dead_zones = detect_dead_zones(activity, game["dead_zone"]); write_json(project / "dead_zones.json", dead_zones)
         if job.cancelled.is_set(): return {}
         job.update("Detectando e agrupando highlights", 78); append_log(project, "Detectando eventos e agrupando highlights"); visual_events = detect_events(visual, audio, defaults["combat_threshold"]); outcome_candidates = detect_outcome_candidates(visual_events); events = visual_events + outcome_candidates + transcript_events(transcript); events.sort(key=lambda event: event["start"]); write_json(project / "gameplay_events.json", events)
         settings = read_json(project / "settings.json", {})
         highlight_settings = style_highlight_settings(game["highlight"], settings.get("edit_type", "automatic"))
-        highlights = build_highlights(events, game["weights"], highlight_settings, source["duration"])
+        highlights = build_highlights(events, game["weights"], highlight_settings, source["duration"], dead_zones)
         debug_frames = save_debug_frames(video, visual_events + outcome_candidates, project / "debug")
         job.update("Gerando thumbnails", 88)
         for highlight in highlights:
             if job.cancelled.is_set(): return {}
             thumbnail = project / "thumbnails" / f"{highlight['id']}.jpg"
             if create_thumbnail(video, highlight["start"], thumbnail): highlight["thumbnail"] = thumbnail.name
-        write_json(project / "highlights.json", highlights); append_log(project, f"Análise concluída ({settings.get('edit_type', 'automatic')}): {len(highlights)} highlights")
-        return {"highlights": highlights, "events": events, "activity": activity, "debug_frames": debug_frames, "duration": source["duration"], "transcription": transcript.get("engine"), "warning": transcript.get("warning")}
+        write_json(project / "highlights.json", highlights); append_log(project, f"Análise concluída ({settings.get('edit_type', 'automatic')}): {len(highlights)} highlights; {len(dead_zones)} zonas mortas")
+        return {"highlights": highlights, "events": events, "activity": activity, "dead_zones": dead_zones, "debug_frames": debug_frames, "duration": source["duration"], "transcription": transcript.get("engine"), "warning": transcript.get("warning")}
     job = jobs.start(str(project), "analysis", work)
     return job.snapshot()
 

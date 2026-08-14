@@ -45,7 +45,7 @@ def create_project(video: Path, source: dict, settings: dict) -> Path:
     if previous.get("source_signature") not in (None, signature):
         # Reusing a path for a modified recording must not reuse old analytics.
         # Layout is intentionally retained because it belongs to the creator.
-        generated = ("transcript.json", "transcript.txt", "audio_features.json", "visual_features.json", "activity_score.json", "gameplay_events.json", "highlights.json", "edl.json", "preview.mp4", "final.mp4", "preview_verify.json", "final_verify.json", "feedback.jsonl")
+        generated = ("transcript.json", "transcript.txt", "audio_features.json", "visual_features.json", "activity_score.json", "dead_zones.json", "gameplay_events.json", "highlights.json", "edl.json", "preview.mp4", "final.mp4", "preview_verify.json", "final_verify.json", "feedback.jsonl")
         for name in generated:
             (folder / name).unlink(missing_ok=True)
         for thumbnail in (folder / "thumbnails").glob("*"):
