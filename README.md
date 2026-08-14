@@ -4,7 +4,7 @@ Editor local para transformar gameplays longas de Free Fire em uma sugestão de 
 
 ## Estado do MVP
 
-O fluxo já está implementado: carregar vídeo → FFprobe → transcrição local opcional → análise leve de áudio/movimento → candidatos de combate v1 → highlights revisáveis → EDL → preview/final FFmpeg → validação de FPS e áudio.
+O fluxo já está implementado: carregar vídeo → FFprobe → transcrição local opcional → análise leve de áudio/movimento → candidatos de combate v1 → highlights revisáveis → EDL → preview/final FFmpeg → validação de FPS e áudio. Análise e renderização mostram etapa/porcentagem e podem ser canceladas.
 
 O detector de combate é heurístico v1 (movimento + energia de áudio). Kill feed/OCR, mortes, reações faciais, legendas e efeitos temporizados são extensões planejadas, não promessas concluídas.
 
@@ -28,7 +28,7 @@ O vídeo original nunca é modificado. Cada projeto vai para `projects/<vídeo>-
 
 ## Calibração de layout
 
-O núcleo já possui conversão de regiões normalizadas em `app/core/gameplay.py`. A página visual de calibração de webcam/HUD será a próxima extensão; até lá, não há valores de layout fixados no código.
+A página **Configurar layout do Free Fire** salva webcam, placar, kill feed, HP, minimapa e centro de gameplay como regiões normalizadas. Preencha `x`, `y`, `w` e `h` de 0 a 1; nenhuma posição é fixada no código.
 
 ## Estrutura
 
@@ -48,4 +48,3 @@ O núcleo já possui conversão de regiões normalizadas em `app/core/gameplay.p
 ## Desenvolvimento
 
 Execute `python -m pytest`. Consulte `ARCHITECTURE.md` e `AGENTS.md` antes de ampliar módulos.
-

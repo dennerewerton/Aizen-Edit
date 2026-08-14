@@ -1,6 +1,8 @@
 from app.core.edl import edl_duration, make_edl
 from app.core.gameplay import normalized_to_pixels
 from app.core.highlights import group_events
+from app.core.layout import validate_layout
+from app.core.jobs import JobManager
 from app.core.project import source_signature
 from app.core.probe import _ratio
 from app.core.ranking import score_event
@@ -42,3 +44,21 @@ def test_edl_duration_and_selection():
 def test_ffmpeg_command_preserves_fps(tmp_path):
     command = segment_command(tmp_path / "in.mp4", {"start":0,"end":4}, tmp_path / "out.mp4", "60000/1001")
     assert "fps=60000/1001" in command
+
+
+def test_layout_requires_normalized_regions():
+    layout = validate_layout({"regions": {"webcam": {"x": 0, "y": .7, "width": .25, "height": .3}}})
+    assert layout["regions"]["webcam"]["height"] == .3
+    try:
+        validate_layout({"regions": {"webcam": {"x": .9, "y": 0, "width": .2, "height": .2}}})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Layout fora do frame deveria falhar")
+
+
+def test_job_status_is_serializable():
+    manager = JobManager()
+    job = manager.start("project", "test", lambda current: {"ok": True})
+    snapshot = job.snapshot()
+    assert snapshot["id"] == job.id and "cancelled" not in snapshot

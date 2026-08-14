@@ -13,6 +13,8 @@ origem (somente leitura) → ffprobe → áudio/transcrição local → análise
 
 Cada arquivo recebe um projeto em `projects/<nome>-<hash>/`. Artefatos JSON permitem retomar o trabalho sem refazer análise. Um identificador (tamanho + data de modificação + hash parcial) invalida o cache quando a origem muda.
 
+Análise e renderização são jobs locais em background. A interface consulta o estado e pode cancelar; resultados de cada etapa já concluída permanecem no projeto e são reutilizados na abertura seguinte.
+
 ## Módulos
 
 - `probe`: metadados via FFprobe, incluindo FPS racional.
@@ -23,6 +25,8 @@ Cada arquivo recebe um projeto em `projects/<nome>-<hash>/`. Artefatos JSON perm
 - `edl`: decisões editáveis e duração derivada.
 - `renderer`: extração por segmento com fades, concatenação, preview/final e preservação de FPS.
 - `verify`: FFprobe do resultado e checagens de integridade.
+- `jobs`: estado/cancelamento para operações longas, sem serviço externo.
+- `layout` e `thumbnails`: calibração normalizada do HUD e revisão visual de highlights.
 
 ## Hardware e dependências
 
@@ -35,4 +39,3 @@ Ambiente identificado: Windows 11 64-bit, Ryzen 9 5900X, AMD Radeon RX 6800 XT, 
 ## Limites do MVP
 
 OCR de kill feed, reconhecimento facial, legendas queimadas e efeitos temporizados são pontos de extensão, não detectores completos nesta primeira versão. A interface já persiste layout normalizado e decisões do usuário para treinamento futuro.
-
