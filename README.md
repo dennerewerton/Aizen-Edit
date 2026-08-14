@@ -30,6 +30,7 @@ Foi validado o pipeline completo com `C:\Users\Aizen\Videos\2026-08-07 11-23-25.
 
 1. Execute `start.bat`.
 2. Acesse `http://127.0.0.1:8000` se o navegador não abrir automaticamente.
+3. Para continuar um trabalho após fechar o app, escolha-o em **Projetos recentes**; highlights, EDL e análises persistidas são reabertos sem reprocessar o vídeo.
 3. Clique em **Selecionar arquivo** ou cole o caminho completo da gameplay e clique em **Carregar vídeo**.
 4. Escolha a duração automática, aproximada ou personalizada.
 5. Clique em **Analisar vídeo**, revise os momentos e desmarque os indesejados.

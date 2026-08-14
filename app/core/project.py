@@ -55,3 +55,16 @@ def create_project(video: Path, source: dict, settings: dict) -> Path:
     write_json(folder / "project.json", {"source_signature": signature, "created_at": previous.get("created_at", datetime.now().isoformat()), "updated_at": datetime.now().isoformat(), "status": "loaded"})
     append_log(folder, f"Vídeo carregado: {video.name} ({source.get('fps_rational', '?')} FPS)")
     return folder
+
+
+def recent_projects(limit: int = 12) -> list[dict]:
+    """Return lightweight resumable project metadata without reading media."""
+    if not PROJECTS.exists(): return []
+    items = []
+    for project in PROJECTS.iterdir():
+        if not project.is_dir(): continue
+        source = read_json(project / "source.json")
+        state = read_json(project / "project.json", {})
+        if source:
+            items.append({"project": str(project.resolve()), "name": source.get("name", project.name), "updated_at": state.get("updated_at", ""), "has_highlights": (project / "highlights.json").exists(), "has_edl": (project / "edl.json").exists()})
+    return sorted(items, key=lambda item: item["updated_at"], reverse=True)[:limit]

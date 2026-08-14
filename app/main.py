@@ -18,7 +18,7 @@ from .core.jobs import JobManager
 from .core.layout import load_layout, save_layout
 from .core.paths import CONFIG, ROOT
 from .core.probe import probe_video
-from .core.project import append_log, create_project, read_json, write_json
+from .core.project import append_log, create_project, read_json, recent_projects, write_json
 from .core.renderer import render
 from .core.speech import transcript_events
 from .core.thumbnails import create_frame, create_thumbnail
@@ -56,6 +56,16 @@ def load_video(request: VideoRequest):
     settings = request.model_dump()
     project = create_project(video, source, settings)
     return {"project": str(project), "source": source}
+
+
+@app.get("/api/projects")
+def list_projects(): return recent_projects()
+
+
+@app.get("/api/project")
+def open_project(project: str):
+    base = folder(project)
+    return {"project": str(base), "source": read_json(base / "source.json"), "settings": read_json(base / "settings.json", {}), "layout": load_layout(base), "highlights": read_json(base / "highlights.json", []), "events": read_json(base / "gameplay_events.json", []), "activity": read_json(base / "activity_score.json", []), "has_edl": (base / "edl.json").exists()}
 
 
 @app.post("/api/pick-video")

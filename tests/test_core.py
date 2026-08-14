@@ -12,6 +12,7 @@ from app.core.jobs import JobManager
 from app.core.project import source_signature
 from app.core.project import append_log
 from app.core import project as project_module
+from app.core.project import recent_projects
 from app.core.probe import _ratio
 from app.core.ranking import score_event
 from app.core.renderer import segment_command, subtitle_style
@@ -52,6 +53,15 @@ def test_changed_source_invalidates_cached_analysis(tmp_path, monkeypatch):
     source.write_bytes(b"second version")
     project_module.create_project(source, {"path": str(source)}, {})
     assert not (folder / "transcript.json").exists()
+
+
+def test_recent_projects_are_ordered_and_resumable(tmp_path, monkeypatch):
+    monkeypatch.setattr(project_module, "PROJECTS", tmp_path / "projects")
+    for name, updated in (("old", "2020-01-01"), ("new", "2021-01-01")):
+        folder = project_module.PROJECTS / name; folder.mkdir(parents=True)
+        (folder / "source.json").write_text('{"name":"' + name + '"}', encoding="utf-8")
+        (folder / "project.json").write_text('{"updated_at":"' + updated + '"}', encoding="utf-8")
+    assert [item["name"] for item in recent_projects()] == ["new", "old"]
 
 
 def test_project_log_is_human_readable(tmp_path):
