@@ -25,12 +25,16 @@ def group_events(events: list[dict], gap: float = 5.0) -> list[list[dict]]:
 
 def build_highlights(events: list[dict], weights: dict, settings: dict, duration: float | None = None) -> list[dict]:
     result = []
+    pre_context, post_context = settings["pre_context_seconds"], settings["post_context_seconds"]
+    if duration is not None and duration <= settings.get("short_video_max_seconds", 0):
+        pre_context = min(pre_context, max(.25, duration * settings.get("short_video_context_ratio", .12)))
+        post_context = min(post_context, max(.25, duration * settings.get("short_video_context_ratio", .12)))
     for group in group_events(events, settings["merge_gap_seconds"]):
         score = sum(score_event(event, weights) for event in group)
         if score < settings["minimum_score"]: continue
         types = list(dict.fromkeys(event["type"] for event in group))
-        start = max(0, group[0]["start"] - settings["pre_context_seconds"])
-        end = group[-1]["end"] + settings["post_context_seconds"]
+        start = max(0, group[0]["start"] - pre_context)
+        end = group[-1]["end"] + post_context
         if duration is not None: end = min(end, duration)
         if end <= start: continue
         result.append({"id": f"highlight-{len(result)+1:03}", "start": start, "end": end, "score": round(score, 2), "events": types, "reason": " + ".join(types), "selected": True, "favorite": False})

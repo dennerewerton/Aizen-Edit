@@ -42,6 +42,8 @@ Para abrir em uma janela nativa, sem terminal e sem precisar abrir o navegador, 
 
 Quando há uma duração definida, o editor prioriza os highlights de maior score até o limite aproximado e sempre os organiza na ordem cronológica da gameplay.
 
+No modo de duração **Automática**, vídeos com até dois minutos recebem uma edição proporcionalmente curta (em vez de contexto excessivo). O limite e o contexto para esses vídeos ficam configuráveis em `config/freefire.json`.
+
 O tipo de edição influencia a sugestão: **Mais dinâmica** encurta o contexto e agrupamento; **Mais natural** preserva mais preparação e consequência; **Só melhores momentos** eleva o limiar de seleção. A edição automática usa os valores padrão do Free Fire em `config/freefire.json`.
 
 Ao salvar a EDL, o app valida os limites ajustados manualmente e registra decisões de manter, remover ou favoritar em `feedback.jsonl` para aprendizagem futura.

@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from .core.audio import analyze_audio
 from .core.assets import list_sfx, sfx_path
 from .core.captions import build_srt
-from .core.edl import make_edl, validate_highlights
+from .core.edl import automatic_target_duration, make_edl, validate_highlights
 from .core.effects import validate_effect
 from .core.gameplay import analyze_gameplay, build_activity_score, detect_events, detect_outcome_candidates, save_debug_frames
 from .core.highlights import build_highlights, style_highlight_settings
@@ -149,7 +149,7 @@ def save_edl(request: HighlightsRequest):
     caption_mode = settings.get("captions", "Nenhuma")
     subtitle_path = project / "subtitles.srt"
     target = settings.get("target_duration", "automatic")
-    try: target_seconds = None if target in {"automatic", "custom", ""} else float(target)
+    try: target_seconds = automatic_target_duration(source["duration"], read_json(CONFIG / "freefire.json")["highlight"]) if target == "automatic" else (None if target in {"custom", ""} else float(target))
     except (TypeError, ValueError): target_seconds = None
     edl = make_edl(source["path"], request.highlights, source["fps_rational"], str(subtitle_path) if caption_mode not in {"none", "Nenhuma"} else None, target_seconds)
     build_srt(transcript, edl["segments"], subtitle_path, caption_mode)

@@ -1,4 +1,4 @@
-from app.core.edl import edl_duration, make_edl, validate_highlights
+from app.core.edl import automatic_target_duration, edl_duration, make_edl, validate_highlights
 from app.core.effects import filters_for_effects, validate_effect, windowed_video_filtergraph
 from app.core.captions import build_srt, srt_timestamp
 from app.core.gameplay import normalized_to_pixels, detect_outcome_candidates, save_debug_frames
@@ -101,6 +101,13 @@ def test_edl_uses_score_budget_but_keeps_source_order():
     assert [segment["highlight_id"] for segment in edl["segments"]] == ["early", "late"]
 
 
+def test_short_source_uses_proportional_target_and_clips_single_long_segment():
+    settings = {"short_video_max_seconds": 120, "short_video_target_ratio": .6, "short_video_min_target_seconds": 2}
+    target = automatic_target_duration(10, settings)
+    edl = make_edl("x.mp4", [{"id":"long","start":0,"end":10,"reason":"combat","score":9,"selected":True}], "60/1", target_duration=target)
+    assert target == 6 and edl_duration(edl["segments"]) == 6
+
+
 def test_selected_highlights_must_be_inside_source_duration():
     validate_highlights([{"id":"ok","start":0,"end":3,"selected":True}], 3)
     try: validate_highlights([{"id":"bad","start":3,"end":2,"selected":True}], 4)
@@ -191,6 +198,13 @@ def test_audio_timeline_uses_requested_step():
 def test_highlights_are_clamped_to_source_duration():
     highlights = build_highlights([{"start": 2, "end": 3, "type": "combat", "confidence": 1, "signals": {"motion": 1, "audio": 1}}], {"combat": 4, "motion": 2, "audio": 2, "confidence": 1}, {"pre_context_seconds": 3, "post_context_seconds": 3, "merge_gap_seconds": 5, "minimum_score": 0}, 4.416)
     assert highlights[0]["start"] == 0 and highlights[0]["end"] == 4.416
+
+
+def test_short_video_highlights_use_shorter_context():
+    settings = {"pre_context_seconds": 3, "post_context_seconds": 3, "merge_gap_seconds": 5, "minimum_score": 0, "short_video_max_seconds": 120, "short_video_context_ratio": .1}
+    event = {"start": 5, "end": 6, "type": "combat", "confidence": 1, "signals": {"motion": 1, "audio": 1}}
+    highlight = build_highlights([event], {"combat": 4, "motion": 2, "audio": 2, "confidence": 1}, settings, 10)[0]
+    assert highlight["start"] == 4 and highlight["end"] == 7
 
 
 def test_edit_type_changes_highlight_context_and_threshold():
