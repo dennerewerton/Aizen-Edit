@@ -139,7 +139,8 @@ def render_video(kind: str, request: ProjectRequest):
     if not edl: raise HTTPException(400, "Gere o EDL antes de renderizar.")
     def work(job):
         output = project / f"{kind}.mp4"; job.update("Renderizando segmentos", 5)
-        render(Path(source["path"]), edl, output, 720 if kind == "preview" else None, has_audio=bool(source["audio"]), cancelled=job.cancelled, progress=lambda n, total: job.update("Renderizando segmentos", 5 + int(80 * n / total)), layout=load_layout(project), output_size=(source["width"], source["height"]))
+        defaults = read_json(CONFIG / "default.json")
+        render(Path(source["path"]), edl, output, 720 if kind == "preview" else None, has_audio=bool(source["audio"]), cancelled=job.cancelled, progress=lambda n, total: job.update("Renderizando segmentos", 5 + int(80 * n / total)), layout=load_layout(project), output_size=(source["width"], source["height"]), use_hardware=defaults.get("use_hardware_encoder", False))
         if job.cancelled.is_set(): return {}
         job.update("Verificando saída", 92); verification = verify_render(output, source["fps"]); write_json(project / f"{kind}_verify.json", verification)
         return {"file": f"{kind}.mp4", "verification": verification}

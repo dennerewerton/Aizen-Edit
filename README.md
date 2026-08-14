@@ -16,6 +16,8 @@ O detector de combate é heurístico v1 (movimento + energia de áudio). A trans
 
 Na primeira transcrição, o modelo local é baixado uma única vez. Este computador usa CPU + `int8`: a Radeon RX 6800 XT não é aproveitada por `faster-whisper` no Windows, pois o backend GPU dele exige CUDA/NVIDIA. A análise visual continua caso o backend não esteja disponível.
 
+Para renderização, o aplicativo tenta `h264_amf` da Radeon RX 6800 XT quando `use_hardware_encoder` está ativo em `config/default.json`. Caso AMF não esteja disponível no driver, cada segmento volta automaticamente para `libx264` em CPU.
+
 ### LLM local opcional
 
 `config/default.json` deixa o LLM local desativado. Quando desejar testar um Ollama local, defina `enabled` como `true` e informe um `model`. Essa integração é somente para trechos pequenos de transcrição e não é necessária para editar vídeos.

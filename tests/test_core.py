@@ -62,6 +62,9 @@ def test_edl_duration_and_selection():
 def test_ffmpeg_command_preserves_fps(tmp_path):
     command = segment_command(tmp_path / "in.mp4", {"start":0,"end":4}, tmp_path / "out.mp4", "60000/1001")
     assert "fps=60000/1001" in command
+    assert "libx264" in command
+    amf = segment_command(tmp_path / "in.mp4", {"start":0,"end":4}, tmp_path / "out.mp4", "60/1", video_encoder="h264_amf")
+    assert "h264_amf" in amf
 
 
 def test_layout_requires_normalized_regions():

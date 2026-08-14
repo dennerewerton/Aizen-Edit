@@ -9,7 +9,7 @@ def encoder(use_hardware: bool) -> str:
     return "h264_amf" if use_hardware else "libx264"
 
 
-def segment_command(source: Path, segment: dict, output: Path, fps: str, preview_height: int | None = None, has_audio: bool = True, layout: dict | None = None, output_size: tuple[int, int] | None = None) -> list[str]:
+def segment_command(source: Path, segment: dict, output: Path, fps: str, preview_height: int | None = None, has_audio: bool = True, layout: dict | None = None, output_size: tuple[int, int] | None = None, video_encoder: str = "libx264") -> list[str]:
     duration = segment["end"] - segment["start"]
     fade = min(0.03, duration / 4)
     effect_video, effect_audio = filters_for_effects(segment.get("effects", []), layout, output_size)
@@ -19,7 +19,10 @@ def segment_command(source: Path, segment: dict, output: Path, fps: str, preview
     if has_audio:
         audio_filters = effect_audio + [f"afade=t=in:st=0:d={fade}", f"afade=t=out:st={max(0, duration-fade)}:d={fade}"]
         command += ["-af", ",".join(audio_filters), "-c:a", "aac"]
-    command += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(output)]
+    command += ["-c:v", video_encoder]
+    if video_encoder == "h264_amf": command += ["-quality", "quality", "-rc", "cqp", "-qp_i", "20", "-qp_p", "22"]
+    else: command += ["-crf", "18", "-preset", "medium"]
+    command += ["-pix_fmt", "yuv420p", "-movflags", "+faststart", str(output)]
     return command
 
 
@@ -43,14 +46,19 @@ def _subtitle_filter(path: Path) -> str:
     return f"subtitles=filename='{escaped}':charenc=UTF-8"
 
 
-def render(source: Path, edl: dict, output: Path, preview_height: int | None = None, has_audio: bool = True, cancelled=None, progress=None, layout: dict | None = None, output_size: tuple[int, int] | None = None) -> None:
+def render(source: Path, edl: dict, output: Path, preview_height: int | None = None, has_audio: bool = True, cancelled=None, progress=None, layout: dict | None = None, output_size: tuple[int, int] | None = None, use_hardware: bool = False) -> None:
     if not edl["segments"]: raise ValueError("Nenhum highlight selecionado para renderizar.")
     work = output.parent / "render_segments"; work.mkdir(exist_ok=True)
     clips = []
     for index, segment in enumerate(edl["segments"]):
         if cancelled and cancelled.is_set(): raise RuntimeError("Renderização cancelada.")
         clip = work / f"{index:03}.mp4"; clips.append(clip)
-        _run(segment_command(source, segment, clip, edl["fps_rational"], preview_height, has_audio, layout, output_size), cancelled)
+        preferred = encoder(use_hardware)
+        try:
+            _run(segment_command(source, segment, clip, edl["fps_rational"], preview_height, has_audio, layout, output_size, preferred), cancelled)
+        except subprocess.CalledProcessError:
+            if preferred != "h264_amf": raise
+            _run(segment_command(source, segment, clip, edl["fps_rational"], preview_height, has_audio, layout, output_size, "libx264"), cancelled)
         if progress: progress(index + 1, len(edl["segments"]))
     listing = work / "concat.txt"
     listing.write_text("".join(f"file '{clip.resolve().as_posix()}'\n" for clip in clips), encoding="utf-8")
