@@ -12,13 +12,17 @@ O detector de combate é heurístico v1 (movimento + energia de áudio). A trans
 
 1. Confirme que `ffmpeg` e `ffprobe` estão no PATH (já detectados neste computador).
 2. Execute `setup.bat`.
-3. Opcionalmente, instale transcrição local: `python -m pip install faster-whisper`.
+3. `setup.bat` instala o backend local `faster-whisper`.
 
-O `faster-whisper` baixa um modelo local no primeiro uso. Sem ele, a análise visual continua e a interface informa que a transcrição não está disponível.
+Na primeira transcrição, o modelo local é baixado uma única vez. Este computador usa CPU + `int8`: a Radeon RX 6800 XT não é aproveitada por `faster-whisper` no Windows, pois o backend GPU dele exige CUDA/NVIDIA. A análise visual continua caso o backend não esteja disponível.
 
 ### LLM local opcional
 
 `config/default.json` deixa o LLM local desativado. Quando desejar testar um Ollama local, defina `enabled` como `true` e informe um `model`. Essa integração é somente para trechos pequenos de transcrição e não é necessária para editar vídeos.
+
+## Validação realizada
+
+Foi validado o pipeline completo com `C:\Users\Aizen\Videos\2026-08-07 11-23-25.mp4` (4,42 s, HEVC 1920×1080, 60 FPS, AAC): FFprobe, transcrição local `faster-whisper`, análise, highlight, EDL, preview com legenda e final. O preview preservou 60 FPS em 1280×720 e o final preservou 60 FPS em 1920×1080; ambos mantiveram áudio AAC.
 
 ## Primeiro uso
 

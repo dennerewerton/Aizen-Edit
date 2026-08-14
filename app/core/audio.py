@@ -2,12 +2,13 @@ import subprocess
 from pathlib import Path
 
 
-def analyze_audio(path: Path, duration: float, step: float = 1.0) -> list[dict]:
+def analyze_audio(path: Path, duration: float, step: float = 1.0, sample_rate: int = 48_000) -> list[dict]:
     """Use FFmpeg's streamed RMS metadata; falls back to no signal when audio is absent."""
-    # `reset` counts decoded audio frames. About 50 AAC frames is roughly one
-    # second, keeping long recordings bounded instead of emitting every frame.
-    reset_frames = max(1, round(50 * step))
-    command = ["ffmpeg", "-hide_banner", "-i", str(path), "-af", f"astats=metadata=1:reset={reset_frames},ametadata=print:key=lavfi.astats.Overall.RMS_level", "-f", "null", "-"]
+    # Group decoded samples into one block per requested window before asking
+    # astats for metadata. ametadata otherwise emits one RMS reading per codec
+    # frame, which corrupts the timeline on long recordings.
+    window_samples = max(1, round(sample_rate * step))
+    command = ["ffmpeg", "-hide_banner", "-i", str(path), "-af", f"asetnsamples=n={window_samples}:p=0,astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.RMS_level", "-f", "null", "-"]
     result = subprocess.run(command, capture_output=True, text=True)
     values = []
     for line in result.stderr.splitlines():

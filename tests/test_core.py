@@ -3,7 +3,9 @@ from app.core.effects import filters_for_effects, validate_effect
 from app.core.captions import build_srt, srt_timestamp
 from app.core.gameplay import normalized_to_pixels
 from app.core.gameplay import build_activity_score
+from app.core.audio import _times
 from app.core.highlights import group_events
+from app.core.highlights import build_highlights
 from app.core.layout import validate_layout
 from app.core.local_llm import LocalLLM
 from app.core.jobs import JobManager
@@ -115,3 +117,12 @@ def test_webcam_effect_requires_calibration():
 def test_local_llm_is_off_without_model():
     llm = LocalLLM()
     assert not llm.enabled and not llm.available() and llm.classify_excerpt("teste") is None
+
+
+def test_audio_timeline_uses_requested_step():
+    assert list(_times(2.1, 1.0)) == [0.0, 1.0, 2.0]
+
+
+def test_highlights_are_clamped_to_source_duration():
+    highlights = build_highlights([{"start": 2, "end": 3, "type": "combat", "confidence": 1, "signals": {"motion": 1, "audio": 1}}], {"combat": 4, "motion": 2, "audio": 2, "confidence": 1}, {"pre_context_seconds": 3, "post_context_seconds": 3, "merge_gap_seconds": 5, "minimum_score": 0}, 4.416)
+    assert highlights[0]["start"] == 0 and highlights[0]["end"] == 4.416

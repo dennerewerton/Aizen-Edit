@@ -33,7 +33,7 @@ Análise e renderização são jobs locais em background. A interface consulta o
 
 ## Hardware e dependências
 
-Ambiente identificado: Windows 11 64-bit, Ryzen 9 5900X, AMD Radeon RX 6800 XT, Python 3.14 e FFmpeg 2023. A build FFmpeg lista `h264_amf` e `hevc_amf`; o render tenta AMF se configurado e cai para `libx264` se falhar. OpenCV já está disponível. FastAPI e Uvicorn são instalados pelo `setup.bat`. `faster-whisper` é opcional porque ainda pode não oferecer rodas para Python 3.14; o aplicativo avisa claramente e a análise visual continua funcional.
+Ambiente identificado: Windows 11 64-bit, Ryzen 9 5900X, AMD Radeon RX 6800 XT, Python 3.14 e FFmpeg 2023. A build FFmpeg lista `h264_amf` e `hevc_amf`; o render tenta AMF se configurado e cai para `libx264` se falhar. OpenCV já está disponível. FastAPI, Uvicorn e `faster-whisper` são instalados pelo `setup.bat`. Como `faster-whisper` usa CUDA para GPU e a máquina tem Radeon, a transcrição configurada é CPU com `int8`, em `config/default.json`.
 
 ## Referência externa
 
@@ -44,3 +44,7 @@ Ambiente identificado: Windows 11 64-bit, Ryzen 9 5900X, AMD Radeon RX 6800 XT, 
 OCR de kill feed, reconhecimento facial, legendas queimadas e efeitos temporizados são pontos de extensão, não detectores completos nesta primeira versão. A interface já persiste layout normalizado e decisões do usuário para treinamento futuro.
 
 `LocalLLM` é uma integração opcional e desativada em `config/default.json`. Ela consulta apenas um trecho curto de transcrição por um serviço em `localhost` (por exemplo, Ollama) e nunca envia vídeo, frames ou dados a serviços externos.
+
+## Evidência de integração
+
+Em 2026-08-13, um clipe real local de 4,42 segundos, HEVC 1080p/60 com AAC, passou por FFprobe, transcrição `faster-whisper`, análise, EDL, preview legendado e render final. A verificação final confirmou 60 FPS, resolução esperada e áudio presente em ambos os outputs.

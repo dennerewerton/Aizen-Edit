@@ -24,15 +24,17 @@ def segment_command(source: Path, segment: dict, output: Path, fps: str, preview
 
 
 def _run(command: list[str], cancelled=None) -> None:
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    # FFmpeg writes progress continually to stderr. Keeping that pipe unread
+    # deadlocks a long render once Windows' pipe buffer fills.
+    command = [command[0], "-hide_banner", "-loglevel", "error", *command[1:]]
+    process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     while process.poll() is None:
         if cancelled and cancelled.is_set():
             process.terminate(); process.wait(timeout=5)
             raise RuntimeError("Renderização cancelada.")
         time.sleep(.1)
     if process.returncode:
-        _, error = process.communicate()
-        raise subprocess.CalledProcessError(process.returncode, command, stderr=error)
+        raise subprocess.CalledProcessError(process.returncode, command)
 
 
 def _subtitle_filter(path: Path) -> str:

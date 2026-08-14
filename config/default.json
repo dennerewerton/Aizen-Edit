@@ -1,1 +1,1 @@
-{"preview_height":720,"audio_fade_seconds":0.03,"analysis_sample_seconds":1.0,"combat_threshold":0.55,"use_hardware_encoder":true,"local_llm":{"enabled":false,"base_url":"http://127.0.0.1:11434","model":null}}
+{"preview_height":720,"audio_fade_seconds":0.03,"analysis_sample_seconds":1.0,"combat_threshold":0.55,"use_hardware_encoder":true,"transcription":{"engine":"faster-whisper","model":"small","device":"cpu","compute_type":"int8"},"local_llm":{"enabled":false,"base_url":"http://127.0.0.1:11434","model":null}}

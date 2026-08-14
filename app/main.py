@@ -1,4 +1,5 @@
 import json
+import math
 import logging
 from pathlib import Path
 
@@ -63,16 +64,25 @@ def analyze(request: ProjectRequest):
     def work(job):
         source = read_json(project / "source.json"); video = Path(source["path"]); defaults = read_json(CONFIG / "default.json"); game = read_json(CONFIG / "freefire.json")
         job.update("Transcrevendo localmente", 10); transcript_path = project / "transcript.json"
-        transcript = read_json(transcript_path) or transcribe_local(video); write_json(transcript_path, transcript)
+        transcription_config = defaults["transcription"]
+        transcript = read_json(transcript_path)
+        if not transcript or transcript.get("engine") == "unavailable":
+            transcript = transcribe_local(video, transcription_config["model"], transcription_config["device"], transcription_config["compute_type"])
+            write_json(transcript_path, transcript)
         (project / "transcript.txt").write_text("\n".join(s.get("text", "") for s in transcript["segments"]), encoding="utf-8")
         if job.cancelled.is_set(): return {}
-        job.update("Extraindo atividade de áudio", 30); audio = read_json(project / "audio_features.json") or analyze_audio(video, source["duration"]); write_json(project / "audio_features.json", audio)
+        job.update("Extraindo atividade de áudio", 30); audio = read_json(project / "audio_features.json")
+        expected_audio_windows = math.ceil(source["duration"] / defaults["analysis_sample_seconds"]) + 2
+        if not audio or len(audio) > expected_audio_windows:
+            sample_rate = source["audio"]["sample_rate"] if source["audio"] else 48_000
+            audio = analyze_audio(video, source["duration"], defaults["analysis_sample_seconds"], sample_rate)
+            write_json(project / "audio_features.json", audio)
         if job.cancelled.is_set(): return {}
         job.update("Analisando movimento da gameplay", 55); visual = read_json(project / "visual_features.json") or analyze_gameplay(video, defaults["analysis_sample_seconds"]); write_json(project / "visual_features.json", visual)
         activity = build_activity_score(visual, audio, transcript); write_json(project / "activity_score.json", activity)
         if job.cancelled.is_set(): return {}
         job.update("Detectando e agrupando highlights", 78); events = detect_events(visual, audio, defaults["combat_threshold"]) + transcript_events(transcript); events.sort(key=lambda event: event["start"]); write_json(project / "gameplay_events.json", events)
-        highlights = build_highlights(events, game["weights"], game["highlight"])
+        highlights = build_highlights(events, game["weights"], game["highlight"], source["duration"])
         job.update("Gerando thumbnails", 88)
         for highlight in highlights:
             if job.cancelled.is_set(): return {}
