@@ -1,6 +1,19 @@
 from .ranking import score_event
 
 
+def style_highlight_settings(settings: dict, edit_type: str) -> dict:
+    """Adapt context and threshold without scattering editorial policy in web code."""
+    result = dict(settings)
+    style = str(edit_type).strip().lower()
+    if style in {"mais dinâmica", "mais dinamica", "dynamic"}:
+        result.update(pre_context_seconds=1.5, post_context_seconds=2.0, merge_gap_seconds=3.0)
+    elif style in {"mais natural", "natural"}:
+        result.update(pre_context_seconds=4.0, post_context_seconds=4.0, merge_gap_seconds=7.0, minimum_score=max(0, float(settings["minimum_score"]) - .5))
+    elif style in {"só melhores momentos", "so melhores momentos", "best"}:
+        result.update(pre_context_seconds=2.0, post_context_seconds=2.0, merge_gap_seconds=3.0, minimum_score=float(settings["minimum_score"]) + 2.0)
+    return result
+
+
 def group_events(events: list[dict], gap: float = 5.0) -> list[list[dict]]:
     interesting = [e for e in events if e["type"] != "idle"]
     groups: list[list[dict]] = []

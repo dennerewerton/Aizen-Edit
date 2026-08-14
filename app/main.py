@@ -13,7 +13,7 @@ from .core.captions import build_srt
 from .core.edl import make_edl, validate_highlights
 from .core.effects import validate_effect
 from .core.gameplay import analyze_gameplay, build_activity_score, detect_events, detect_outcome_candidates, save_debug_frames
-from .core.highlights import build_highlights
+from .core.highlights import build_highlights, style_highlight_settings
 from .core.jobs import JobManager
 from .core.layout import load_layout, save_layout
 from .core.paths import CONFIG, ROOT
@@ -103,14 +103,16 @@ def analyze(request: ProjectRequest):
         activity = build_activity_score(visual, audio, transcript); write_json(project / "activity_score.json", activity)
         if job.cancelled.is_set(): return {}
         job.update("Detectando e agrupando highlights", 78); append_log(project, "Detectando eventos e agrupando highlights"); visual_events = detect_events(visual, audio, defaults["combat_threshold"]); outcome_candidates = detect_outcome_candidates(visual_events); events = visual_events + outcome_candidates + transcript_events(transcript); events.sort(key=lambda event: event["start"]); write_json(project / "gameplay_events.json", events)
-        highlights = build_highlights(events, game["weights"], game["highlight"], source["duration"])
+        settings = read_json(project / "settings.json", {})
+        highlight_settings = style_highlight_settings(game["highlight"], settings.get("edit_type", "automatic"))
+        highlights = build_highlights(events, game["weights"], highlight_settings, source["duration"])
         debug_frames = save_debug_frames(video, visual_events + outcome_candidates, project / "debug")
         job.update("Gerando thumbnails", 88)
         for highlight in highlights:
             if job.cancelled.is_set(): return {}
             thumbnail = project / "thumbnails" / f"{highlight['id']}.jpg"
             if create_thumbnail(video, highlight["start"], thumbnail): highlight["thumbnail"] = thumbnail.name
-        write_json(project / "highlights.json", highlights); append_log(project, f"Análise concluída: {len(highlights)} highlights")
+        write_json(project / "highlights.json", highlights); append_log(project, f"Análise concluída ({settings.get('edit_type', 'automatic')}): {len(highlights)} highlights")
         return {"highlights": highlights, "events": events, "activity": activity, "debug_frames": debug_frames, "duration": source["duration"], "transcription": transcript.get("engine"), "warning": transcript.get("warning")}
     job = jobs.start(str(project), "analysis", work)
     return job.snapshot()

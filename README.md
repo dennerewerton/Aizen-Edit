@@ -37,6 +37,8 @@ Foi validado o pipeline completo com `C:\Users\Aizen\Videos\2026-08-07 11-23-25.
 
 Quando há uma duração definida, o editor prioriza os highlights de maior score até o limite aproximado e sempre os organiza na ordem cronológica da gameplay.
 
+O tipo de edição influencia a sugestão: **Mais dinâmica** encurta o contexto e agrupamento; **Mais natural** preserva mais preparação e consequência; **Só melhores momentos** eleva o limiar de seleção. A edição automática usa os valores padrão do Free Fire em `config/freefire.json`.
+
 Ao salvar a EDL, o app valida os limites ajustados manualmente e registra decisões de manter, remover ou favoritar em `feedback.jsonl` para aprendizagem futura.
 
 O vídeo original nunca é modificado. Cada projeto vai para `projects/<vídeo>-<id>/`; ali ficam `source.json`, transcrições, análise, highlights, `edl.json`, `preview.mp4`, `final.mp4`, validações e feedback.

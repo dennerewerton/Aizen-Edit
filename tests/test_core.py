@@ -5,7 +5,7 @@ from app.core.gameplay import normalized_to_pixels, detect_outcome_candidates, s
 from app.core.gameplay import build_activity_score
 from app.core.audio import _times
 from app.core.highlights import group_events
-from app.core.highlights import build_highlights
+from app.core.highlights import build_highlights, style_highlight_settings
 from app.core.layout import validate_layout
 from app.core.local_llm import LocalLLM
 from app.core.jobs import JobManager
@@ -160,6 +160,16 @@ def test_audio_timeline_uses_requested_step():
 def test_highlights_are_clamped_to_source_duration():
     highlights = build_highlights([{"start": 2, "end": 3, "type": "combat", "confidence": 1, "signals": {"motion": 1, "audio": 1}}], {"combat": 4, "motion": 2, "audio": 2, "confidence": 1}, {"pre_context_seconds": 3, "post_context_seconds": 3, "merge_gap_seconds": 5, "minimum_score": 0}, 4.416)
     assert highlights[0]["start"] == 0 and highlights[0]["end"] == 4.416
+
+
+def test_edit_type_changes_highlight_context_and_threshold():
+    base = {"pre_context_seconds": 3, "post_context_seconds": 3, "merge_gap_seconds": 5, "minimum_score": 2}
+    dynamic = style_highlight_settings(base, "Mais dinâmica")
+    natural = style_highlight_settings(base, "Mais natural")
+    best = style_highlight_settings(base, "Só melhores momentos")
+    assert dynamic["pre_context_seconds"] < base["pre_context_seconds"]
+    assert natural["merge_gap_seconds"] > base["merge_gap_seconds"]
+    assert best["minimum_score"] > base["minimum_score"]
 
 
 def test_outcome_candidates_require_hud_and_combat_signals():
