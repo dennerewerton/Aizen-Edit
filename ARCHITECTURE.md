@@ -45,6 +45,8 @@ OCR de kill feed, reconhecimento facial, legendas queimadas e efeitos temporizad
 
 `LocalLLM` é uma integração opcional e desativada em `config/default.json`. Ela consulta apenas um trecho curto de transcrição por um serviço em `localhost` (por exemplo, Ollama) e nunca envia vídeo, frames ou dados a serviços externos.
 
+O detector de kill/death atual só cria candidatos quando uma região calibrada de kill feed ou HP muda durante um combate com atividade visual e áudio. Sem calibração, ele deliberadamente não afirma kill ou death.
+
 ## Evidência de integração
 
 Em 2026-08-13, um clipe real local de 4,42 segundos, HEVC 1080p/60 com AAC, passou por FFprobe, transcrição `faster-whisper`, análise, EDL, preview legendado e render final. A verificação final confirmou 60 FPS, resolução esperada e áudio presente em ambos os outputs.

@@ -12,7 +12,7 @@ from .core.audio import analyze_audio
 from .core.captions import build_srt
 from .core.edl import make_edl
 from .core.effects import validate_effect
-from .core.gameplay import analyze_gameplay, build_activity_score, detect_events
+from .core.gameplay import analyze_gameplay, build_activity_score, detect_events, detect_outcome_candidates
 from .core.highlights import build_highlights
 from .core.jobs import JobManager
 from .core.layout import load_layout, save_layout
@@ -78,10 +78,17 @@ def analyze(request: ProjectRequest):
             audio = analyze_audio(video, source["duration"], defaults["analysis_sample_seconds"], sample_rate)
             write_json(project / "audio_features.json", audio)
         if job.cancelled.is_set(): return {}
-        job.update("Analisando movimento da gameplay", 55); visual = read_json(project / "visual_features.json") or analyze_gameplay(video, defaults["analysis_sample_seconds"]); write_json(project / "visual_features.json", visual)
+        job.update("Analisando movimento da gameplay", 55); layout = load_layout(project)
+        state = read_json(project / "project.json", {})
+        analysis_signature = {"sample_seconds": defaults["analysis_sample_seconds"], "layout": layout}
+        visual = read_json(project / "visual_features.json")
+        if not visual or state.get("analysis_signature") != analysis_signature:
+            visual = analyze_gameplay(video, defaults["analysis_sample_seconds"], layout)
+            write_json(project / "visual_features.json", visual)
+            state["analysis_signature"] = analysis_signature; write_json(project / "project.json", state)
         activity = build_activity_score(visual, audio, transcript); write_json(project / "activity_score.json", activity)
         if job.cancelled.is_set(): return {}
-        job.update("Detectando e agrupando highlights", 78); events = detect_events(visual, audio, defaults["combat_threshold"]) + transcript_events(transcript); events.sort(key=lambda event: event["start"]); write_json(project / "gameplay_events.json", events)
+        job.update("Detectando e agrupando highlights", 78); visual_events = detect_events(visual, audio, defaults["combat_threshold"]); events = visual_events + detect_outcome_candidates(visual_events) + transcript_events(transcript); events.sort(key=lambda event: event["start"]); write_json(project / "gameplay_events.json", events)
         highlights = build_highlights(events, game["weights"], game["highlight"], source["duration"])
         job.update("Gerando thumbnails", 88)
         for highlight in highlights:

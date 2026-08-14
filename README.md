@@ -38,6 +38,8 @@ Quando legendas estiverem ativadas, `subtitles.srt` é gerado localmente com tim
 
 Na revisão de highlights, o seletor **Efeito** permite aplicar manualmente Punch Zoom, Webcam Punch-In, Freeze Frame, câmera lenta ou texto. Eles são associados ao momento revisado; o sistema não os aplica aleatoriamente. Webcam Punch-In exige a região da webcam calibrada.
 
+O detector de possível abate/morte é conservador: ele depende de atividade de combate e de mudanças em regiões de kill feed ou HP que você calibrar. Sem essa calibração, o app mostrará combates e conversas, mas não inventará um abate.
+
 ## Calibração de layout
 
 A página **Configurar layout do Free Fire** salva webcam, placar, kill feed, HP, minimapa e centro de gameplay como regiões normalizadas. Preencha `x`, `y`, `w` e `h` de 0 a 1; nenhuma posição é fixada no código.
