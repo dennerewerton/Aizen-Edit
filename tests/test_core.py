@@ -69,6 +69,8 @@ def test_edl_duration_and_selection():
 def test_expected_render_duration_accounts_for_timed_effects():
     edl = {"segments": [{"start": 0, "end": 4, "effects": [{"type": "slow_motion"}]}, {"start": 10, "end": 12, "effects": [{"type": "freeze_frame"}]}]}
     assert expected_edl_duration(edl) == 8.5
+    high = {"segments": [{"start": 0, "end": 4, "effects": [{"type": "slow_motion", "intensity": "high"}]}]}
+    assert expected_edl_duration(high) == 8
 
 
 def test_edl_uses_score_budget_but_keeps_source_order():
@@ -139,6 +141,7 @@ def test_effects_are_validated_and_generate_filters():
     assert "setpts=1.5*PTS" in video and "atempo=0.666667" in audio
     graph = windowed_video_filtergraph([{"type": "punch_zoom", "start": 0, "end": 1}], None, "60/1", 720)
     assert "overlay=0:0:enable='between(t,0,1)'" in graph and "scale=-2:720" in graph
+    assert "iw/1.18" in windowed_video_filtergraph([{"type": "punch_zoom", "start": 0, "end": 1, "intensity": "high"}], None, "60/1", None)
 
 
 def test_webcam_effect_requires_calibration():

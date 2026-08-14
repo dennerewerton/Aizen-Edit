@@ -5,6 +5,10 @@ contains it. This prevents random visual changes in the MVP.
 """
 
 SUPPORTED_EFFECTS = {"punch_zoom", "webcam_punch_in", "freeze_frame", "slow_motion", "text"}
+INTENSITIES = {"low", "medium", "high"}
+SLOW_FACTORS = {"low": 1.25, "medium": 1.5, "high": 2.0}
+FREEZE_SECONDS = {"low": .25, "medium": .5, "high": .75}
+ZOOM_FACTORS = {"low": 1.06, "medium": 1.12, "high": 1.18}
 
 
 def validate_effect(effect: dict) -> dict:
@@ -14,7 +18,10 @@ def validate_effect(effect: dict) -> dict:
     start, end = float(effect.get("start", 0)), float(effect.get("end", 0))
     if end <= start:
         raise ValueError("O efeito precisa ter duração positiva.")
-    return {**effect, "type": kind, "start": start, "end": end}
+    intensity = str(effect.get("intensity", "medium")).lower()
+    if intensity not in INTENSITIES:
+        raise ValueError("Intensidade de efeito inválida.")
+    return {**effect, "type": kind, "start": start, "end": end, "intensity": intensity}
 
 
 def filters_for_effects(effects: list[dict], layout: dict | None = None, output_size: tuple[int, int] | None = None) -> tuple[list[str], list[str]]:
@@ -23,6 +30,7 @@ def filters_for_effects(effects: list[dict], layout: dict | None = None, output_
     target = f"{output_size[0]}:{output_size[1]}" if output_size else "iw:ih"
     for effect in effects:
         kind = effect["type"]
+        intensity = effect.get("intensity", "medium")
         if kind == "punch_zoom":
             # Implemented through an overlay graph below, because crop itself
             # has no timeline support in the Windows FFmpeg build.
@@ -32,16 +40,19 @@ def filters_for_effects(effects: list[dict], layout: dict | None = None, output_
             if not region: raise ValueError("Configure a webcam antes de usar Webcam Punch-In.")
             continue
         elif kind == "freeze_frame":
-            video.append("tpad=stop_mode=clone:stop_duration=0.5")
-            audio.append("apad=pad_dur=0.5")
+            duration = FREEZE_SECONDS[intensity]
+            video.append(f"tpad=stop_mode=clone:stop_duration={duration}")
+            audio.append(f"apad=pad_dur={duration}")
         elif kind == "slow_motion":
-            video.append("setpts=1.5*PTS")
-            audio.append("atempo=0.666667")
+            factor = SLOW_FACTORS[intensity]
+            video.append(f"setpts={factor}*PTS")
+            audio.append(f"atempo={1 / factor:.6f}")
         elif kind == "text":
             message = str(effect.get("text", ""))
             if not message: raise ValueError("O efeito de texto precisa de uma mensagem.")
             safe = message.replace("'", r"\'").replace(":", r"\:")
-            video.append(f"drawtext=text='{safe}':x=(w-text_w)/2:y=h*0.12:fontsize=h/18:fontcolor=white:borderw=3:bordercolor=black:enable='between(t,{effect['start']},{effect['end']})'")
+            divisor = {"low": 22, "medium": 18, "high": 14}[intensity]
+            video.append(f"drawtext=text='{safe}':x=(w-text_w)/2:y=h*0.12:fontsize=h/{divisor}:fontcolor=white:borderw=3:bordercolor=black:enable='between(t,{effect['start']},{effect['end']})'")
     return video, audio
 
 
@@ -60,7 +71,8 @@ def windowed_video_filtergraph(effects: list[dict], layout: dict | None, fps: st
         base, branch, zoomed, output = f"[base{index}]", f"[branch{index}]", f"[zoomed{index}]", f"[video{index}]"
         graph.append(f"{current}split=2{base}{branch}")
         if effect["type"] == "punch_zoom":
-            graph.append(f"{branch}crop=trunc(iw/1.12/2)*2:trunc(ih/1.12/2)*2:(iw-ow)/2:(ih-oh),scale=trunc(iw*1.12/2)*2:trunc(ih*1.12/2)*2{zoomed}")
+            factor = ZOOM_FACTORS[effect.get("intensity", "medium")]
+            graph.append(f"{branch}crop=trunc(iw/{factor}/2)*2:trunc(ih/{factor}/2)*2:(iw-ow)/2:(ih-oh),scale=trunc(iw*{factor}/2)*2:trunc(ih*{factor}/2)*2{zoomed}")
         else:
             region = (layout or {}).get("regions", {}).get("webcam")
             if not region:

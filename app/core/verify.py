@@ -1,5 +1,6 @@
 from pathlib import Path
 from .probe import probe_video
+from .effects import FREEZE_SECONDS, SLOW_FACTORS
 
 
 def verify_render(path: Path, expected_fps: float, expected_duration: float | None = None) -> dict:
@@ -17,10 +18,12 @@ def expected_edl_duration(edl: dict) -> float:
     total = 0.0
     for segment in edl.get("segments", []):
         duration = float(segment["end"]) - float(segment["start"])
-        kinds = {effect.get("type") for effect in segment.get("effects", [])}
-        if "slow_motion" in kinds:
-            duration *= 1.5
-        if "freeze_frame" in kinds:
-            duration += .5
+        effects = segment.get("effects", [])
+        slow = next((effect for effect in effects if effect.get("type") == "slow_motion"), None)
+        freeze = next((effect for effect in effects if effect.get("type") == "freeze_frame"), None)
+        if slow:
+            duration *= SLOW_FACTORS[slow.get("intensity", "medium")]
+        if freeze:
+            duration += FREEZE_SECONDS[freeze.get("intensity", "medium")]
         total += duration
     return total

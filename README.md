@@ -51,6 +51,8 @@ Ao renderizar, o app usa a calibração para escolher automaticamente uma faixa 
 
 Na revisão de highlights, o seletor **Efeito** permite aplicar manualmente Punch Zoom, Webcam Punch-In, Freeze Frame, câmera lenta ou texto. Zoom, webcam e texto ocupam uma janela curta no começo do highlight; freeze e câmera lenta atuam no highlight escolhido. Eles são associados ao momento revisado; o sistema não os aplica aleatoriamente. Webcam Punch-In exige a região da webcam calibrada.
 
+A intensidade selecionada também é aplicada de fato: **Baixo**, **Médio** e **Alto** mudam a força do zoom, o tempo de freeze, a velocidade da câmera lenta e o tamanho do texto. **Nenhum** bloqueia a associação de novos efeitos.
+
 O detector de possível abate/morte é conservador: ele depende de atividade de combate e de mudanças em regiões de kill feed ou HP que você calibrar. Sem essa calibração, o app mostrará combates e conversas, mas não inventará um abate.
 
 ## Calibração de layout
