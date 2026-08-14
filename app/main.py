@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .core.audio import analyze_audio
+from .core.captions import build_srt
 from .core.edl import make_edl
 from .core.gameplay import analyze_gameplay, detect_events
 from .core.highlights import build_highlights
@@ -85,7 +86,12 @@ def analyze(request: ProjectRequest):
 def save_edl(request: HighlightsRequest):
     project = folder(request.project); source = read_json(project / "source.json")
     write_json(project / "highlights.json", request.highlights)
-    edl = make_edl(source["path"], request.highlights, source["fps_rational"]); write_json(project / "edl.json", edl)
+    settings = read_json(project / "settings.json", {}); transcript = read_json(project / "transcript.json", {"segments": []})
+    caption_mode = settings.get("captions", "Nenhuma")
+    subtitle_path = project / "subtitles.srt"
+    edl = make_edl(source["path"], request.highlights, source["fps_rational"], str(subtitle_path) if caption_mode not in {"none", "Nenhuma"} else None)
+    build_srt(transcript, edl["segments"], subtitle_path, caption_mode)
+    write_json(project / "edl.json", edl)
     with (project / "feedback.jsonl").open("a", encoding="utf-8") as output:
         for h in request.highlights: output.write(json.dumps({"highlight_id": h["id"], "decision": "keep" if h.get("selected") else "remove", "features": {"score": h["score"], "events": h["events"]}}, ensure_ascii=False) + "\n")
     return edl

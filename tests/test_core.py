@@ -1,4 +1,5 @@
 from app.core.edl import edl_duration, make_edl
+from app.core.captions import build_srt, srt_timestamp
 from app.core.gameplay import normalized_to_pixels
 from app.core.highlights import group_events
 from app.core.layout import validate_layout
@@ -79,3 +80,10 @@ def test_job_status_is_serializable():
 def test_transcript_events_detect_reaction_and_pause():
     events = transcript_events({"segments": [{"start": 0, "end": 1, "text": "nossa, kkk!"}, {"start": 3, "end": 4, "text": "esse noob perdeu"}]})
     assert [event["type"] for event in events] == ["reaction", "idle", "trash_talk"]
+
+
+def test_captions_use_output_timeline_offsets(tmp_path):
+    output = tmp_path / "captions.srt"
+    count = build_srt({"segments": [{"start": 11, "end": 12, "text": "nossa!"}]}, [{"start": 10, "end": 15}, {"start": 20, "end": 25}], output, "all")
+    assert count == 1 and "00:00:01,000 --> 00:00:02,000" in output.read_text(encoding="utf-8")
+    assert srt_timestamp(3661.234) == "01:01:01,234"

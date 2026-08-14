@@ -26,6 +26,8 @@ O `faster-whisper` baixa um modelo local no primeiro uso. Sem ele, a análise vi
 
 O vídeo original nunca é modificado. Cada projeto vai para `projects/<vídeo>-<id>/`; ali ficam `source.json`, transcrições, análise, highlights, `edl.json`, `preview.mp4`, `final.mp4`, validações e feedback.
 
+Quando legendas estiverem ativadas, `subtitles.srt` é gerado localmente com timestamps remapeados para a edição final. No modo **Apenas momentos importantes**, o MVP mantém falas enfáticas, reações e provocações detectadas; **Todas as falas** mantém toda fala que atravessa um segmento escolhido.
+
 ## Calibração de layout
 
 A página **Configurar layout do Free Fire** salva webcam, placar, kill feed, HP, minimapa e centro de gameplay como regiões normalizadas. Preencha `x`, `y`, `w` e `h` de 0 a 1; nenhuma posição é fixada no código.

@@ -24,6 +24,7 @@ Análise e renderização são jobs locais em background. A interface consulta o
 - `gameplay`: amostragem OpenCV, diferença de luminância/movimento e eventos candidatos. Detectores de kill/death são v1 heurísticos, não alegações de detecção perfeita.
 - `highlights` e `ranking`: agrupam eventos e produzem candidatos configuráveis.
 - `edl`: decisões editáveis e duração derivada.
+- `captions`: SRT local com timestamps rebaseados para a timeline de saída; as legendas são aplicadas após a concatenação.
 - `renderer`: extração por segmento com fades, concatenação, preview/final e preservação de FPS.
 - `verify`: FFprobe do resultado e checagens de integridade.
 - `jobs`: estado/cancelamento para operações longas, sem serviço externo.
