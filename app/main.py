@@ -23,7 +23,7 @@ from .core.renderer import render
 from .core.speech import transcript_events
 from .core.thumbnails import create_frame, create_thumbnail
 from .core.transcription import transcribe_local
-from .core.verify import verify_render
+from .core.verify import expected_edl_duration, verify_render
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(message)s", datefmt="%H:%M:%S")
 app = FastAPI(title="Aizen Auto Editor")
@@ -151,7 +151,7 @@ def render_video(kind: str, request: ProjectRequest):
         defaults = read_json(CONFIG / "default.json")
         render(Path(source["path"]), edl, output, 720 if kind == "preview" else None, has_audio=bool(source["audio"]), cancelled=job.cancelled, progress=lambda n, total: job.update("Renderizando segmentos", 5 + int(80 * n / total)), layout=load_layout(project), output_size=(source["width"], source["height"]), use_hardware=defaults.get("use_hardware_encoder", False))
         if job.cancelled.is_set(): return {}
-        job.update("Verificando saída", 92); verification = verify_render(output, source["fps"]); write_json(project / f"{kind}_verify.json", verification); append_log(project, f"Renderização {kind} concluída; validação: {'ok' if verification['ok'] else 'falhou'}")
+        job.update("Verificando saída", 92); verification = verify_render(output, source["fps"], expected_edl_duration(edl)); write_json(project / f"{kind}_verify.json", verification); append_log(project, f"Renderização {kind} concluída; validação: {'ok' if verification['ok'] else 'falhou'}")
         return {"file": f"{kind}.mp4", "verification": verification}
     return jobs.start(str(project), kind, work).snapshot()
 

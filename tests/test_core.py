@@ -15,6 +15,7 @@ from app.core import project as project_module
 from app.core.probe import _ratio
 from app.core.ranking import score_event
 from app.core.renderer import segment_command, subtitle_style
+from app.core.verify import expected_edl_duration
 from app.core.speech import transcript_events
 
 
@@ -63,6 +64,11 @@ def test_edl_duration_and_selection():
     edl = make_edl("x.mp4", highlights, "60/1")
     assert edl_duration(edl["segments"]) == 2
     assert edl["fps_rational"] == "60/1"
+
+
+def test_expected_render_duration_accounts_for_timed_effects():
+    edl = {"segments": [{"start": 0, "end": 4, "effects": [{"type": "slow_motion"}]}, {"start": 10, "end": 12, "effects": [{"type": "freeze_frame"}]}]}
+    assert expected_edl_duration(edl) == 8.5
 
 
 def test_edl_uses_score_budget_but_keeps_source_order():

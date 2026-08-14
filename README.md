@@ -4,7 +4,7 @@ Editor local para transformar gameplays longas de Free Fire em uma sugestão de 
 
 ## Estado do MVP
 
-O fluxo já está implementado: carregar vídeo → FFprobe → transcrição local opcional → análise leve de áudio/movimento → candidatos de combate v1 → highlights revisáveis → EDL → preview/final FFmpeg → validação de FPS e áudio. Análise e renderização mostram etapa/porcentagem e podem ser canceladas.
+O fluxo já está implementado: carregar vídeo → FFprobe → transcrição local opcional → análise leve de áudio/movimento → candidatos de combate v1 → highlights revisáveis → EDL → preview/final FFmpeg → validação de FPS, áudio e duração. Análise e renderização mostram etapa/porcentagem e podem ser canceladas.
 
 O detector de combate é heurístico v1 (movimento + energia de áudio). A transcrição também gera candidatos determinísticos de conversa, reação, provocação e pausa. Kill feed/OCR, mortes, reações faciais, legendas e efeitos temporizados são extensões planejadas, não promessas concluídas.
 
