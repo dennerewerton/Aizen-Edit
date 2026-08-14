@@ -159,6 +159,12 @@ def test_captions_use_output_timeline_offsets(tmp_path):
     assert srt_timestamp(3661.234) == "01:01:01,234"
 
 
+def test_empty_caption_selection_removes_stale_subtitle_file(tmp_path):
+    output = tmp_path / "captions.srt"; output.write_text("old", encoding="utf-8")
+    assert build_srt({"segments": []}, [{"start": 0, "end": 1}], output, "all") == 0
+    assert not output.exists()
+
+
 def test_activity_score_combines_motion_audio_and_speech():
     score = build_activity_score([{"time": 1, "motion": .8}], [{"time": 1, "energy": .5}], {"segments": [{"start": .5, "end": 1.5}]})
     assert score == [{"time": 1, "activity": .75, "motion": .8, "audio": .5, "speech": 1.0}]

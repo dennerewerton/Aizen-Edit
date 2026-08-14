@@ -31,6 +31,9 @@ def build_srt(transcript: dict, segments: list[dict], output: Path, mode: str) -
             entries.append(f"{index}\n{srt_timestamp(output_start)} --> {srt_timestamp(output_end)}\n{text}\n")
             index += 1
         offset += duration
+    if not entries:
+        output.unlink(missing_ok=True)
+        return 0
     output.write_text("\n".join(entries), encoding="utf-8")
     return len(entries)
 

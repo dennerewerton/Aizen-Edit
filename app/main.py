@@ -152,7 +152,7 @@ def save_edl(request: HighlightsRequest):
     try: target_seconds = automatic_target_duration(source["duration"], read_json(CONFIG / "freefire.json")["highlight"]) if target == "automatic" else (None if target in {"custom", ""} else float(target))
     except (TypeError, ValueError): target_seconds = None
     edl = make_edl(source["path"], request.highlights, source["fps_rational"], str(subtitle_path) if caption_mode not in {"none", "Nenhuma"} else None, target_seconds)
-    build_srt(transcript, edl["segments"], subtitle_path, caption_mode)
+    if not build_srt(transcript, edl["segments"], subtitle_path, caption_mode): edl["subtitles"] = None
     write_json(project / "edl.json", edl)
     append_log(project, f"EDL salva: {len(edl['segments'])} segmentos, {edl['total_duration']} s")
     with (project / "feedback.jsonl").open("a", encoding="utf-8") as output:

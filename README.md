@@ -54,6 +54,8 @@ O vídeo original nunca é modificado. Cada projeto vai para `projects/<vídeo>-
 
 Quando legendas estiverem ativadas, `subtitles.srt` é gerado localmente com timestamps remapeados para a edição final. No modo **Apenas momentos importantes**, o MVP mantém falas enfáticas, reações e provocações detectadas; **Todas as falas** mantém toda fala que atravessa um segmento escolhido.
 
+Se não houver fala dentro de um trecho selecionado, a renderização segue normalmente sem criar um arquivo de legenda vazio.
+
 Ao renderizar, o app usa a calibração para escolher automaticamente uma faixa de legenda entre topo, meio e base, evitando webcam e HUD quando eles forem marcados. A revisão também mostra uma timeline clicável de atividade, eventos e highlights. Frames dos candidatos visuais ficam em `debug/` com o rótulo de detector **candidato** para facilitar ajustes futuros.
 
 Na revisão de highlights, o seletor **Efeito** permite aplicar manualmente Punch Zoom, Webcam Punch-In, Freeze Frame, câmera lenta ou texto. Zoom, webcam e texto ocupam uma janela curta no começo do highlight; freeze e câmera lenta atuam no highlight escolhido. Eles são associados ao momento revisado; o sistema não os aplica aleatoriamente. Webcam Punch-In exige a região da webcam calibrada.
