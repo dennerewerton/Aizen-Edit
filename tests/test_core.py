@@ -4,9 +4,11 @@ from app.core.highlights import group_events
 from app.core.layout import validate_layout
 from app.core.jobs import JobManager
 from app.core.project import source_signature
+from app.core import project as project_module
 from app.core.probe import _ratio
 from app.core.ranking import score_event
 from app.core.renderer import segment_command
+from app.core.speech import transcript_events
 
 
 def test_fps_rational_parsing():
@@ -32,6 +34,16 @@ def test_source_signature_is_stable_and_changes(tmp_path):
     assert before == source_signature(source)
     source.write_bytes(b"changed")
     assert before != source_signature(source)
+
+
+def test_changed_source_invalidates_cached_analysis(tmp_path, monkeypatch):
+    monkeypatch.setattr(project_module, "PROJECTS", tmp_path / "projects")
+    source = tmp_path / "video.mp4"; source.write_bytes(b"first")
+    folder = project_module.create_project(source, {"path": str(source)}, {})
+    (folder / "transcript.json").write_text("{}", encoding="utf-8")
+    source.write_bytes(b"second version")
+    project_module.create_project(source, {"path": str(source)}, {})
+    assert not (folder / "transcript.json").exists()
 
 
 def test_edl_duration_and_selection():
@@ -62,3 +74,8 @@ def test_job_status_is_serializable():
     job = manager.start("project", "test", lambda current: {"ok": True})
     snapshot = job.snapshot()
     assert snapshot["id"] == job.id and "cancelled" not in snapshot
+
+
+def test_transcript_events_detect_reaction_and_pause():
+    events = transcript_events({"segments": [{"start": 0, "end": 1, "text": "nossa, kkk!"}, {"start": 3, "end": 4, "text": "esse noob perdeu"}]})
+    assert [event["type"] for event in events] == ["reaction", "idle", "trash_talk"]

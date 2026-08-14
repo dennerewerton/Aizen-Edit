@@ -1,2 +1,1 @@
-{"weights":{"combat":4.0,"kill":5.0,"death":1.0,"conversation":1.5,"reaction":2.5,"idle":-3.0,"motion":2.0,"audio":2.0,"confidence":1.0},"highlight":{"pre_context_seconds":3.0,"post_context_seconds":3.0,"merge_gap_seconds":5.0,"minimum_score":2.0},"effects":{"webcam_zoom":true,"kill_zoom":true,"freeze_frame":true,"slow_motion":true,"text":true}}
-
+{"weights":{"combat":4.0,"kill":5.0,"death":1.0,"conversation":1.5,"reaction":2.5,"funny":2.5,"trash_talk":2.25,"idle":-3.0,"motion":2.0,"audio":2.0,"confidence":1.0},"highlight":{"pre_context_seconds":3.0,"post_context_seconds":3.0,"merge_gap_seconds":5.0,"minimum_score":2.0},"effects":{"webcam_zoom":true,"kill_zoom":true,"freeze_frame":true,"slow_motion":true,"text":true}}

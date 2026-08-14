@@ -17,6 +17,7 @@ from .core.paths import CONFIG, ROOT
 from .core.probe import probe_video
 from .core.project import create_project, read_json, write_json
 from .core.renderer import render
+from .core.speech import transcript_events
 from .core.thumbnails import create_thumbnail
 from .core.transcription import transcribe_local
 from .core.verify import verify_render
@@ -67,7 +68,7 @@ def analyze(request: ProjectRequest):
         if job.cancelled.is_set(): return {}
         job.update("Analisando movimento da gameplay", 55); visual = read_json(project / "activity_score.json") or analyze_gameplay(video, defaults["analysis_sample_seconds"]); write_json(project / "activity_score.json", visual)
         if job.cancelled.is_set(): return {}
-        job.update("Detectando e agrupando highlights", 78); events = detect_events(visual, audio, defaults["combat_threshold"]); write_json(project / "gameplay_events.json", events)
+        job.update("Detectando e agrupando highlights", 78); events = detect_events(visual, audio, defaults["combat_threshold"]) + transcript_events(transcript); events.sort(key=lambda event: event["start"]); write_json(project / "gameplay_events.json", events)
         highlights = build_highlights(events, game["weights"], game["highlight"])
         job.update("Gerando thumbnails", 88)
         for highlight in highlights:

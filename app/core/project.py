@@ -34,8 +34,17 @@ def create_project(video: Path, source: dict, settings: dict) -> Path:
     folder = project_dir(video)
     for name in ("thumbnails", "debug"):
         (folder / name).mkdir(parents=True, exist_ok=True)
+    signature = source_signature(video)
+    previous = read_json(folder / "project.json", {})
+    if previous.get("source_signature") not in (None, signature):
+        # Reusing a path for a modified recording must not reuse old analytics.
+        # Layout is intentionally retained because it belongs to the creator.
+        generated = ("transcript.json", "transcript.txt", "audio_features.json", "activity_score.json", "gameplay_events.json", "highlights.json", "edl.json", "preview.mp4", "final.mp4", "preview_verify.json", "final_verify.json", "feedback.jsonl")
+        for name in generated:
+            (folder / name).unlink(missing_ok=True)
+        for thumbnail in (folder / "thumbnails").glob("*"):
+            if thumbnail.is_file(): thumbnail.unlink()
     write_json(folder / "source.json", source)
     write_json(folder / "settings.json", settings)
-    write_json(folder / "project.json", {"source_signature": source_signature(video), "created_at": datetime.now().isoformat(), "status": "loaded"})
+    write_json(folder / "project.json", {"source_signature": signature, "created_at": previous.get("created_at", datetime.now().isoformat()), "updated_at": datetime.now().isoformat(), "status": "loaded"})
     return folder
-

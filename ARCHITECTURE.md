@@ -20,6 +20,7 @@ Análise e renderização são jobs locais em background. A interface consulta o
 - `probe`: metadados via FFprobe, incluindo FPS racional.
 - `audio`: energia por janela com FFmpeg; sem carregar áudio inteiro.
 - `transcription`: interface de backends; `faster-whisper` local é opcional e há backend indisponível explícito até o modelo ser instalado.
+- `speech`: sinais editoriais determinísticos extraídos dos timestamps da transcrição; um LLM local futuro pode complementar, mas não substitui o pipeline.
 - `gameplay`: amostragem OpenCV, diferença de luminância/movimento e eventos candidatos. Detectores de kill/death são v1 heurísticos, não alegações de detecção perfeita.
 - `highlights` e `ranking`: agrupam eventos e produzem candidatos configuráveis.
 - `edl`: decisões editáveis e duração derivada.
