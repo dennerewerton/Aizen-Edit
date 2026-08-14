@@ -31,8 +31,11 @@ Foi validado o pipeline completo com `C:\Users\Aizen\Videos\2026-08-07 11-23-25.
 1. Execute `start.bat`.
 2. Acesse `http://127.0.0.1:8000` se o navegador não abrir automaticamente.
 3. Clique em **Selecionar arquivo** ou cole o caminho completo da gameplay e clique em **Carregar vídeo**.
-4. Clique em **Analisar vídeo**, revise os momentos e desmarque os indesejados.
-5. Clique em **Gerar edição (EDL)**, depois **Gerar preview** ou **Renderizar final**.
+4. Escolha a duração automática, aproximada ou personalizada.
+5. Clique em **Analisar vídeo**, revise os momentos e desmarque os indesejados.
+6. Clique em **Gerar edição (EDL)**, depois **Gerar preview** ou **Renderizar final**.
+
+Quando há uma duração definida, o editor prioriza os highlights de maior score até o limite aproximado e sempre os organiza na ordem cronológica da gameplay.
 
 O vídeo original nunca é modificado. Cada projeto vai para `projects/<vídeo>-<id>/`; ali ficam `source.json`, transcrições, análise, highlights, `edl.json`, `preview.mp4`, `final.mp4`, validações e feedback.
 

@@ -65,6 +65,12 @@ def test_edl_duration_and_selection():
     assert edl["fps_rational"] == "60/1"
 
 
+def test_edl_uses_score_budget_but_keeps_source_order():
+    highlights = [{"id":"late","start":30,"end":35,"reason":"combat","score":10,"selected":True}, {"id":"early","start":2,"end":7,"reason":"combat","score":9,"selected":True}, {"id":"middle","start":15,"end":20,"reason":"combat","score":1,"selected":True}]
+    edl = make_edl("x.mp4", highlights, "60/1", target_duration=10)
+    assert [segment["highlight_id"] for segment in edl["segments"]] == ["early", "late"]
+
+
 def test_ffmpeg_command_preserves_fps(tmp_path):
     command = segment_command(tmp_path / "in.mp4", {"start":0,"end":4}, tmp_path / "out.mp4", "60000/1001")
     assert "fps=60000/1001" in command

@@ -124,7 +124,10 @@ def save_edl(request: HighlightsRequest):
     settings = read_json(project / "settings.json", {}); transcript = read_json(project / "transcript.json", {"segments": []})
     caption_mode = settings.get("captions", "Nenhuma")
     subtitle_path = project / "subtitles.srt"
-    edl = make_edl(source["path"], request.highlights, source["fps_rational"], str(subtitle_path) if caption_mode not in {"none", "Nenhuma"} else None)
+    target = settings.get("target_duration", "automatic")
+    try: target_seconds = None if target in {"automatic", "custom", ""} else float(target)
+    except (TypeError, ValueError): target_seconds = None
+    edl = make_edl(source["path"], request.highlights, source["fps_rational"], str(subtitle_path) if caption_mode not in {"none", "Nenhuma"} else None, target_seconds)
     build_srt(transcript, edl["segments"], subtitle_path, caption_mode)
     write_json(project / "edl.json", edl)
     append_log(project, f"EDL salva: {len(edl['segments'])} segmentos, {edl['total_duration']} s")
