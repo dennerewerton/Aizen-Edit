@@ -2,6 +2,8 @@ from pathlib import Path
 
 import cv2
 
+import cv2
+
 
 def normalized_to_pixels(region: dict, width: int, height: int) -> dict:
     return {"x": round(region["x"] * width), "y": round(region["y"] * height), "width": round(region["width"] * width), "height": round(region["height"] * height)}
@@ -73,6 +75,35 @@ def detect_outcome_candidates(events: list[dict]) -> list[dict]:
             confidence = min(1.0, .5 * hp + .25 * signals["motion"] + .25 * signals["audio"])
             candidates.append({"start": event["start"], "end": event["end"], "type": "death_candidate", "confidence": round(confidence, 3), "signals": signals, "reason": "mudança forte de HP durante combate"})
     return candidates
+
+
+def save_debug_frames(path: Path, events: list[dict], directory: Path, maximum: int = 30) -> list[str]:
+    """Save a small, inspectable sample of visual detector candidates.
+
+    These are diagnostic artifacts only: labels say *candidate* and never turn a
+    heuristic into a confirmed kill/death event.
+    """
+    candidates = [event for event in events if event["type"] in {"combat", "kill_candidate", "death_candidate"}]
+    if not candidates:
+        return []
+    directory.mkdir(parents=True, exist_ok=True)
+    capture = cv2.VideoCapture(str(path)); saved = []
+    try:
+        for index, event in enumerate(candidates[:maximum], 1):
+            moment = (float(event["start"]) + float(event["end"])) / 2
+            capture.set(cv2.CAP_PROP_POS_MSEC, moment * 1000)
+            ok, frame = capture.read()
+            if not ok:
+                continue
+            label = f"{event['type']} candidate | {moment:.1f}s | conf {event['confidence']:.2f}"
+            cv2.rectangle(frame, (12, 12), (min(frame.shape[1] - 12, 760), 58), (0, 0, 0), -1)
+            cv2.putText(frame, label, (22, 43), cv2.FONT_HERSHEY_SIMPLEX, .62, (0, 220, 255), 2, cv2.LINE_AA)
+            filename = f"{index:03}_{event['type']}_{moment:.1f}s.jpg"
+            if cv2.imwrite(str(directory / filename), frame):
+                saved.append(filename)
+    finally:
+        capture.release()
+    return saved
 
 
 def build_activity_score(visual: list[dict], audio: list[dict], transcript: dict) -> list[dict]:

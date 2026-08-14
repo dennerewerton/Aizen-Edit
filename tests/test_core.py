@@ -1,7 +1,7 @@
 from app.core.edl import edl_duration, make_edl, validate_highlights
 from app.core.effects import filters_for_effects, validate_effect
 from app.core.captions import build_srt, srt_timestamp
-from app.core.gameplay import normalized_to_pixels, detect_outcome_candidates
+from app.core.gameplay import normalized_to_pixels, detect_outcome_candidates, save_debug_frames
 from app.core.gameplay import build_activity_score
 from app.core.audio import _times
 from app.core.highlights import group_events
@@ -14,7 +14,7 @@ from app.core.project import append_log
 from app.core import project as project_module
 from app.core.probe import _ratio
 from app.core.ranking import score_event
-from app.core.renderer import segment_command
+from app.core.renderer import segment_command, subtitle_style
 from app.core.speech import transcript_events
 
 
@@ -76,6 +76,12 @@ def test_selected_highlights_must_be_inside_source_duration():
     try: validate_highlights([{"id":"bad","start":3,"end":2,"selected":True}], 4)
     except ValueError: pass
     else: raise AssertionError("Intervalo invertido precisa falhar")
+
+
+def test_caption_style_moves_from_blocked_bottom_band():
+    layout = {"regions": {"webcam": {"x": 0, "y": .7, "width": .3, "height": .3}, "hp": {"x": .4, "y": .75, "width": .2, "height": .2}}}
+    assert not subtitle_style(layout, (1920, 1080)).startswith("Alignment=2")
+    assert subtitle_style({"regions": {}}, (1920, 1080)).startswith("Alignment=2")
 
 
 def test_ffmpeg_command_preserves_fps(tmp_path):

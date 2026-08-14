@@ -40,10 +40,24 @@ def _run(command: list[str], cancelled=None) -> None:
         raise subprocess.CalledProcessError(process.returncode, command)
 
 
-def _subtitle_filter(path: Path) -> str:
+def subtitle_style(layout: dict | None, output_size: tuple[int, int] | None) -> str:
+    """Choose one of three safe caption bands from calibrated HUD/webcam areas."""
+    regions = (layout or {}).get("regions", {}).values()
+    bands = [("top", .14), ("middle", .50), ("bottom", .84)]
+    def obstruction(y: float) -> float:
+        return sum(max(0.0, min(y + .09, r.get("y", 0) + r.get("height", 0)) - max(y - .09, r.get("y", 0))) for r in regions)
+    # Bottom remains the preferred conventional location when it is equally safe.
+    name, y = min(bands, key=lambda band: (obstruction(band[1]), -band[1]))
+    height = (output_size or (1280, 720))[1]
+    if name == "top": return f"Alignment=8,MarginV={max(24, round(height * y))}"
+    if name == "middle": return "Alignment=5,MarginV=0"
+    return f"Alignment=2,MarginV={max(24, round(height * (1-y)))}"
+
+
+def _subtitle_filter(path: Path, layout: dict | None = None, output_size: tuple[int, int] | None = None) -> str:
     # ffmpeg's subtitles filter accepts forward slashes; escape the drive colon.
     escaped = path.resolve().as_posix().replace(":", r"\:").replace("'", r"\'")
-    return f"subtitles=filename='{escaped}':charenc=UTF-8"
+    return f"subtitles=filename='{escaped}':charenc=UTF-8:force_style='{subtitle_style(layout, output_size)}'"
 
 
 def render(source: Path, edl: dict, output: Path, preview_height: int | None = None, has_audio: bool = True, cancelled=None, progress=None, layout: dict | None = None, output_size: tuple[int, int] | None = None, use_hardware: bool = False) -> None:
@@ -66,7 +80,10 @@ def render(source: Path, edl: dict, output: Path, preview_height: int | None = N
     _run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(listing), "-c", "copy", str(intermediate)], cancelled)
     subtitles = edl.get("subtitles")
     if subtitles and Path(subtitles).is_file():
-        _run(["ffmpeg", "-y", "-i", str(intermediate), "-vf", _subtitle_filter(Path(subtitles)), "-c:v", "libx264", "-c:a", "copy", "-movflags", "+faststart", str(output)], cancelled)
+        caption_size = output_size
+        if preview_height and output_size:
+            caption_size = (round(output_size[0] * preview_height / output_size[1]), preview_height)
+        _run(["ffmpeg", "-y", "-i", str(intermediate), "-vf", _subtitle_filter(Path(subtitles), layout, caption_size), "-c:v", "libx264", "-c:a", "copy", "-movflags", "+faststart", str(output)], cancelled)
         intermediate.unlink(missing_ok=True)
     else:
         intermediate.replace(output)
