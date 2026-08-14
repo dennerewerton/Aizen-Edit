@@ -18,7 +18,7 @@ from .core.jobs import JobManager
 from .core.layout import load_layout, save_layout
 from .core.paths import CONFIG, ROOT
 from .core.probe import probe_video
-from .core.project import create_project, read_json, write_json
+from .core.project import append_log, create_project, read_json, write_json
 from .core.renderer import render
 from .core.speech import transcript_events
 from .core.thumbnails import create_frame, create_thumbnail
@@ -77,7 +77,7 @@ def analyze(request: ProjectRequest):
     project = folder(request.project)
     def work(job):
         source = read_json(project / "source.json"); video = Path(source["path"]); defaults = read_json(CONFIG / "default.json"); game = read_json(CONFIG / "freefire.json")
-        job.update("Transcrevendo localmente", 10); transcript_path = project / "transcript.json"
+        job.update("Transcrevendo localmente", 10); append_log(project, "Iniciando transcrição local"); transcript_path = project / "transcript.json"
         transcription_config = defaults["transcription"]
         transcript = read_json(transcript_path)
         if not transcript or transcript.get("engine") == "unavailable":
@@ -85,14 +85,14 @@ def analyze(request: ProjectRequest):
             write_json(transcript_path, transcript)
         (project / "transcript.txt").write_text("\n".join(s.get("text", "") for s in transcript["segments"]), encoding="utf-8")
         if job.cancelled.is_set(): return {}
-        job.update("Extraindo atividade de áudio", 30); audio = read_json(project / "audio_features.json")
+        job.update("Extraindo atividade de áudio", 30); append_log(project, "Extraindo atividade de áudio"); audio = read_json(project / "audio_features.json")
         expected_audio_windows = math.ceil(source["duration"] / defaults["analysis_sample_seconds"]) + 2
         if not audio or len(audio) > expected_audio_windows:
             sample_rate = source["audio"]["sample_rate"] if source["audio"] else 48_000
             audio = analyze_audio(video, source["duration"], defaults["analysis_sample_seconds"], sample_rate)
             write_json(project / "audio_features.json", audio)
         if job.cancelled.is_set(): return {}
-        job.update("Analisando movimento da gameplay", 55); layout = load_layout(project)
+        job.update("Analisando movimento da gameplay", 55); append_log(project, "Analisando movimento e HUD da gameplay"); layout = load_layout(project)
         state = read_json(project / "project.json", {})
         analysis_signature = {"sample_seconds": defaults["analysis_sample_seconds"], "layout": layout}
         visual = read_json(project / "visual_features.json")
@@ -102,14 +102,14 @@ def analyze(request: ProjectRequest):
             state["analysis_signature"] = analysis_signature; write_json(project / "project.json", state)
         activity = build_activity_score(visual, audio, transcript); write_json(project / "activity_score.json", activity)
         if job.cancelled.is_set(): return {}
-        job.update("Detectando e agrupando highlights", 78); visual_events = detect_events(visual, audio, defaults["combat_threshold"]); events = visual_events + detect_outcome_candidates(visual_events) + transcript_events(transcript); events.sort(key=lambda event: event["start"]); write_json(project / "gameplay_events.json", events)
+        job.update("Detectando e agrupando highlights", 78); append_log(project, "Detectando eventos e agrupando highlights"); visual_events = detect_events(visual, audio, defaults["combat_threshold"]); events = visual_events + detect_outcome_candidates(visual_events) + transcript_events(transcript); events.sort(key=lambda event: event["start"]); write_json(project / "gameplay_events.json", events)
         highlights = build_highlights(events, game["weights"], game["highlight"], source["duration"])
         job.update("Gerando thumbnails", 88)
         for highlight in highlights:
             if job.cancelled.is_set(): return {}
             thumbnail = project / "thumbnails" / f"{highlight['id']}.jpg"
             if create_thumbnail(video, highlight["start"], thumbnail): highlight["thumbnail"] = thumbnail.name
-        write_json(project / "highlights.json", highlights)
+        write_json(project / "highlights.json", highlights); append_log(project, f"Análise concluída: {len(highlights)} highlights")
         return {"highlights": highlights, "transcription": transcript.get("engine"), "warning": transcript.get("warning")}
     job = jobs.start(str(project), "analysis", work)
     return job.snapshot()
@@ -127,6 +127,7 @@ def save_edl(request: HighlightsRequest):
     edl = make_edl(source["path"], request.highlights, source["fps_rational"], str(subtitle_path) if caption_mode not in {"none", "Nenhuma"} else None)
     build_srt(transcript, edl["segments"], subtitle_path, caption_mode)
     write_json(project / "edl.json", edl)
+    append_log(project, f"EDL salva: {len(edl['segments'])} segmentos, {edl['total_duration']} s")
     with (project / "feedback.jsonl").open("a", encoding="utf-8") as output:
         for h in request.highlights: output.write(json.dumps({"highlight_id": h["id"], "decision": "keep" if h.get("selected") else "remove", "features": {"score": h["score"], "events": h["events"]}}, ensure_ascii=False) + "\n")
     return edl
@@ -138,11 +139,11 @@ def render_video(kind: str, request: ProjectRequest):
     project = folder(request.project); source = read_json(project / "source.json"); edl = read_json(project / "edl.json")
     if not edl: raise HTTPException(400, "Gere o EDL antes de renderizar.")
     def work(job):
-        output = project / f"{kind}.mp4"; job.update("Renderizando segmentos", 5)
+        output = project / f"{kind}.mp4"; job.update("Renderizando segmentos", 5); append_log(project, f"Iniciando renderização {kind}")
         defaults = read_json(CONFIG / "default.json")
         render(Path(source["path"]), edl, output, 720 if kind == "preview" else None, has_audio=bool(source["audio"]), cancelled=job.cancelled, progress=lambda n, total: job.update("Renderizando segmentos", 5 + int(80 * n / total)), layout=load_layout(project), output_size=(source["width"], source["height"]), use_hardware=defaults.get("use_hardware_encoder", False))
         if job.cancelled.is_set(): return {}
-        job.update("Verificando saída", 92); verification = verify_render(output, source["fps"]); write_json(project / f"{kind}_verify.json", verification)
+        job.update("Verificando saída", 92); verification = verify_render(output, source["fps"]); write_json(project / f"{kind}_verify.json", verification); append_log(project, f"Renderização {kind} concluída; validação: {'ok' if verification['ok'] else 'falhou'}")
         return {"file": f"{kind}.mp4", "verification": verification}
     return jobs.start(str(project), kind, work).snapshot()
 

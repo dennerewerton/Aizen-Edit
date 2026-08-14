@@ -36,6 +36,8 @@ Foi validado o pipeline completo com `C:\Users\Aizen\Videos\2026-08-07 11-23-25.
 
 O vídeo original nunca é modificado. Cada projeto vai para `projects/<vídeo>-<id>/`; ali ficam `source.json`, transcrições, análise, highlights, `edl.json`, `preview.mp4`, `final.mp4`, validações e feedback.
 
+`log.txt` registra etapas importantes do projeto, como transcrição, análise, EDL e renderização, sem inundar o terminal.
+
 Quando legendas estiverem ativadas, `subtitles.srt` é gerado localmente com timestamps remapeados para a edição final. No modo **Apenas momentos importantes**, o MVP mantém falas enfáticas, reações e provocações detectadas; **Todas as falas** mantém toda fala que atravessa um segmento escolhido.
 
 Na revisão de highlights, o seletor **Efeito** permite aplicar manualmente Punch Zoom, Webcam Punch-In, Freeze Frame, câmera lenta ou texto. Eles são associados ao momento revisado; o sistema não os aplica aleatoriamente. Webcam Punch-In exige a região da webcam calibrada.

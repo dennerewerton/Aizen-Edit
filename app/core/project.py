@@ -30,6 +30,12 @@ def read_json(path: Path, default=None):
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else default
 
 
+def append_log(folder: Path, message: str) -> None:
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    with (folder / "log.txt").open("a", encoding="utf-8") as output:
+        output.write(f"[{timestamp}] {message}\n")
+
+
 def create_project(video: Path, source: dict, settings: dict) -> Path:
     folder = project_dir(video)
     for name in ("thumbnails", "debug"):
@@ -47,4 +53,5 @@ def create_project(video: Path, source: dict, settings: dict) -> Path:
     write_json(folder / "source.json", source)
     write_json(folder / "settings.json", settings)
     write_json(folder / "project.json", {"source_signature": signature, "created_at": previous.get("created_at", datetime.now().isoformat()), "updated_at": datetime.now().isoformat(), "status": "loaded"})
+    append_log(folder, f"Vídeo carregado: {video.name} ({source.get('fps_rational', '?')} FPS)")
     return folder
