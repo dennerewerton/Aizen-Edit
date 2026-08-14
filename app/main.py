@@ -58,6 +58,20 @@ def load_video(request: VideoRequest):
     return {"project": str(project), "source": source}
 
 
+@app.post("/api/pick-video")
+def pick_video():
+    """Native file selector for the local Windows-only application."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk(); root.withdraw(); root.attributes("-topmost", True)
+        selected = filedialog.askopenfilename(title="Selecionar gameplay", filetypes=[("Vídeos", "*.mp4 *.mkv *.mov *.avi *.webm"), ("Todos os arquivos", "*.*")])
+        root.destroy()
+        return {"path": selected}
+    except Exception as error:
+        raise HTTPException(500, f"Não foi possível abrir o seletor de arquivos: {error}") from error
+
+
 @app.post("/api/analyze")
 def analyze(request: ProjectRequest):
     project = folder(request.project)
