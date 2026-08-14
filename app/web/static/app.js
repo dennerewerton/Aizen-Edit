@@ -1,7 +1,8 @@
 let project, highlights=[], activeJob, calibrationLayout={regions:{}}, calibrationImage, dragStart, dragCurrent, timelineDuration=0, sfxAssets=[];
 const $=id=>document.getElementById(id), log=m=>$('log').innerHTML+=`<li>✓ ${m}</li>`;
 const media=name=>`/api/media?project=${encodeURIComponent(project)}&name=${encodeURIComponent(name)}`;
-async function request(url,method='POST',data){const response=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});const value=await response.json();if(!response.ok)throw Error(value.detail);return value}
+function readableError(value){if(typeof value==='string')return value;if(Array.isArray(value))return value.map(item=>item.msg||JSON.stringify(item)).join('\n');if(value&&typeof value==='object')return value.detail||value.message||JSON.stringify(value);return 'Ocorreu um erro inesperado.'}
+async function request(url,method='POST',data){const response=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});const raw=await response.text();let value;try{value=raw?JSON.parse(raw):{}}catch{value={detail:raw}}if(!response.ok)throw Error(readableError(value.detail||value));return value}
 const post=(url,data)=>request(url,'POST',data);
 function showProject(data){project=data.project;$('path').value=data.source.path;$('edit').value=data.settings.edit_type||'automatic';$('effects').value=data.settings.effects||'Médio';$('captions').value=data.settings.captions||'Apenas momentos importantes';const target=String(data.settings.target_duration||'automatic');$('target-duration').value=['automatic','300','480','600','900'].includes(target)?target:'custom';if($('target-duration').value==='custom'){$('custom-duration-wrap').hidden=false;$('custom-duration').value=Math.max(1,Number(target)/60)}$('info').hidden=false;$('actions').hidden=false;$('info').innerHTML=`<h2>${data.source.name}</h2><p>${data.source.width}×${data.source.height} · ${data.source.fps.toFixed(3)} FPS · ${data.source.duration.toFixed(1)} s · ${data.source.codec}</p>`;showLayout(data.layout);loadCalibrationFrame();highlights=data.highlights||[];timelineDuration=data.source.duration;window.currentActivity=data.activity||[];window.currentEvents=data.events||[];if(highlights.length){$('results').hidden=false;$('edl').disabled=false;renderHighlights()}$('preview').disabled=$('final').disabled=!data.has_edl;log('Projeto retomado; dados já processados foram preservados')}
 async function loadRecentProjects(){try{const items=await request('/api/projects','GET');$('recent-projects').innerHTML=items.length?items.map((item,index)=>`<button onclick="openProject(${index})">Abrir ${item.name}${item.has_edl?' · EDL pronta':''}${item.has_highlights?' · análise pronta':''}</button>`).join(''): '<p>Nenhum projeto salvo ainda.</p>';window.recentProjects=items}catch(error){$('recent-projects').textContent='Não foi possível listar projetos.'}}
@@ -38,5 +39,7 @@ const rawShowProject=showProject;
 showProject=data=>rawShowProject({...data,source:{...data.source,fps:Number(data.source?.fps??0),duration:Number(data.source?.duration??0)}});
 const rawRenderTimeline=renderTimeline;
 renderTimeline=(activity=[],events=[])=>rawRenderTimeline(activity.map(point=>({...point,score:Number(point.activity??point.score??0)})),events);
+const nativeAlert=window.alert.bind(window);
+window.alert=value=>nativeAlert(readableError(value));
 loadRecentProjects();
 request('/api/assets/sfx','GET').then(items=>{sfxAssets=items}).catch(()=>{});
