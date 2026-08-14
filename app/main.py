@@ -133,8 +133,10 @@ def save_edl(request: HighlightsRequest):
     project = folder(request.project); source = read_json(project / "source.json")
     try: validate_highlights(request.highlights, source["duration"])
     except ValueError as error: raise HTTPException(400, str(error)) from error
+    effect_flags = read_json(CONFIG / "freefire.json")["effects"]
     for highlight in request.highlights:
-        highlight["effects"] = [validate_effect(effect) for effect in highlight.get("effects", [])]
+        try: highlight["effects"] = [validate_effect(effect, effect_flags) for effect in highlight.get("effects", [])]
+        except ValueError as error: raise HTTPException(400, str(error)) from error
     write_json(project / "highlights.json", request.highlights)
     settings = read_json(project / "settings.json", {}); transcript = read_json(project / "transcript.json", {"segments": []})
     caption_mode = settings.get("captions", "Nenhuma")

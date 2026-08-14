@@ -154,6 +154,12 @@ def test_effects_are_validated_and_generate_filters():
     assert "iw/1.18" in windowed_video_filtergraph([{"type": "punch_zoom", "start": 0, "end": 1, "intensity": "high"}], None, "60/1", None)
 
 
+def test_config_can_disable_an_effect():
+    try: validate_effect({"type": "text", "start": 0, "end": 1, "text": "oi"}, {"text": False})
+    except ValueError: pass
+    else: raise AssertionError("Efeito desativado precisa ser recusado")
+
+
 def test_webcam_effect_requires_calibration():
     effect = {"type": "webcam_punch_in", "start": 0, "end": 1}
     try: filters_for_effects([effect])

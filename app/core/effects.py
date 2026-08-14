@@ -11,10 +11,13 @@ FREEZE_SECONDS = {"low": .25, "medium": .5, "high": .75}
 ZOOM_FACTORS = {"low": 1.06, "medium": 1.12, "high": 1.18}
 
 
-def validate_effect(effect: dict) -> dict:
+def validate_effect(effect: dict, enabled: dict | None = None) -> dict:
     kind = effect.get("type")
     if kind not in SUPPORTED_EFFECTS:
         raise ValueError(f"Efeito não suportado: {kind}")
+    flag = {"punch_zoom": "kill_zoom", "webcam_punch_in": "webcam_zoom", "freeze_frame": "freeze_frame", "slow_motion": "slow_motion", "text": "text"}[kind]
+    if enabled is not None and not enabled.get(flag, False):
+        raise ValueError(f"O efeito {kind} está desativado em config/freefire.json.")
     start, end = float(effect.get("start", 0)), float(effect.get("end", 0))
     if end <= start:
         raise ValueError("O efeito precisa ter duração positiva.")
