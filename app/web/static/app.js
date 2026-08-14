@@ -34,5 +34,9 @@ $('analyze').onclick=async()=>{try{log('Preparando análise…');const result=aw
 $('edl').onclick=async()=>{try{const result=await post('/api/edl',{project,highlights});$('preview').disabled=$('final').disabled=false;log(`EDL montado: ${result.total_duration}s selecionados`)}catch(error){alert(error.message)}};
 async function render(kind){try{log(`Preparando ${kind}…`);const result=await waitForJob(await post(`/api/render/${kind}`,{project}));if(!result.verification.ok)throw Error(result.verification.errors.join('\n'));$('player').hidden=false;$('player').querySelector('video').src=media(result.file);log(`${kind} concluído e verificado`)}catch(error){alert(error.message)}}
 $('preview').onclick=()=>render('preview');$('final').onclick=()=>render('final');
+const rawShowProject=showProject;
+showProject=data=>rawShowProject({...data,source:{...data.source,fps:Number(data.source?.fps??0),duration:Number(data.source?.duration??0)}});
+const rawRenderTimeline=renderTimeline;
+renderTimeline=(activity=[],events=[])=>rawRenderTimeline(activity.map(point=>({...point,score:Number(point.activity??point.score??0)})),events);
 loadRecentProjects();
 request('/api/assets/sfx','GET').then(items=>{sfxAssets=items}).catch(()=>{});
