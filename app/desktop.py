@@ -7,7 +7,7 @@ from urllib.request import urlopen
 import uvicorn
 import webview
 
-from .core.version import APP_NAME, VERSION
+from app.core.version import APP_NAME, VERSION
 
 HOST = "127.0.0.1"
 
