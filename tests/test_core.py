@@ -218,7 +218,7 @@ def test_job_status_is_serializable():
 
 def test_local_health_endpoint_identifies_this_application():
     assert health()["app"] == "Aizen Auto Editor"
-    assert health()["status"] == "ok" and health()["version"] == "0.2.2"
+    assert health()["status"] == "ok" and health()["version"] == "0.2.3"
 
 
 def test_transcript_events_detect_reaction_and_pause():

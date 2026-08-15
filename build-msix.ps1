@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "0.2.2.0"
+    [string]$Version = "0.2.3.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,7 +35,7 @@ if (Test-Path $updateConfig) {
 }
 
 $manifest = Get-Content (Join-Path $root "msix\AppxManifest.xml") -Raw
-$manifest = $manifest.Replace('Version="0.2.2.0"', "Version=`"$Version`"")
+$manifest = $manifest -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"$Version`""
 Set-Content (Join-Path $packageRoot "AppxManifest.xml") $manifest -Encoding UTF8
 
 @'

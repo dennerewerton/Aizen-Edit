@@ -6,7 +6,7 @@
   IgnorableNamespaces="uap desktop rescap">
   <Identity Name="AizenOFC.AizenAutoEditor"
     Publisher="CN=D3490913-869B-44A6-B38B-D79BE52E27EF"
-    Version="0.2.2.0"
+    Version="0.2.3.0"
     ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Aizen Auto Editor</DisplayName>

@@ -1,5 +1,5 @@
 #define AppName "Aizen Auto Editor"
-#define AppVersion "0.2.2"
+#define AppVersion "0.2.3"
 #define AppPublisher "Aizen"
 #define AppExeName "Aizen Auto Editor.exe"
 
