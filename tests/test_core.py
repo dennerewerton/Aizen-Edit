@@ -20,7 +20,7 @@ from app.core import assets as assets_module
 from app.core.probe import _ratio
 from app.core.ranking import score_event
 from app.core.renderer import encoder_options, segment_command, subtitle_style
-from app.core.output import normalize_output_settings, output_size
+from app.core.output import fit_output_crops, normalize_output_settings, output_size
 from app.core.verify import expected_edl_duration
 from app.core.speech import transcript_events
 from app.core.transcription import FasterWhisperTranscriber
@@ -172,6 +172,13 @@ def test_vertical_output_profile_builds_full_and_top_split_filters(tmp_path):
     graph = split_command[split_command.index("-filter_complex") + 1]
     assert "scale=1080:608" in graph and "scale=1080:1312" in graph and "vstack=inputs=2" in graph
     assert output_size({"width": 1920, "height": 1080}, split) == (1080, 1920)
+
+
+def test_top_split_webcam_crop_is_16_by_9_in_source_pixels():
+    profile = fit_output_crops({"output_format": "9:16", "vertical_mode": "top_split"}, {"width": 1920, "height": 1080})
+    webcam = profile["crops"]["webcam"]
+    physical_aspect = webcam["width"] * 1920 / (webcam["height"] * 1080)
+    assert abs(physical_aspect - 16 / 9) < .0001
 
 
 def test_hardware_encoder_options_are_h264_amf_specific():

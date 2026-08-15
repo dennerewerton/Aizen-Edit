@@ -17,7 +17,7 @@ from .core.gameplay import analyze_gameplay, build_activity_score, detect_dead_z
 from .core.highlights import build_highlights, style_highlight_settings
 from .core.jobs import JobManager
 from .core.layout import load_layout, save_layout
-from .core.output import normalize_output_settings, output_size
+from .core.output import fit_output_crops, normalize_output_settings, output_size
 from .core.paths import CONFIG, PROJECTS, ROOT
 from .core.probe import probe_video
 from .core.project import append_log, create_project, read_json, recent_projects, write_json
@@ -192,7 +192,7 @@ def render_video(kind: str, request: ProjectRequest):
         output = project / f"{kind}.mp4"; job.update("Renderizando segmentos", 5); append_log(project, f"Iniciando renderização {kind}")
         defaults = read_json(CONFIG / "default.json")
         settings = read_json(project / "settings.json", {})
-        try: output_profile = normalize_output_settings(settings)
+        try: output_profile = fit_output_crops(settings, source)
         except ValueError: output_profile = normalize_output_settings({})
         size = output_size(source, output_profile)
         render(Path(source["path"]), edl, output, 720 if kind == "preview" else None, has_audio=bool(source["audio"]), cancelled=job.cancelled, progress=lambda n, total: job.update("Renderizando segmentos", 5 + int(80 * n / total)), layout=load_layout(project), output_size=size, output_profile=output_profile, use_hardware=defaults.get("use_hardware_encoder", False), cpu_threads=int(defaults.get("cpu_threads", 0)), filter_threads=int(defaults.get("filter_threads", 0)))
@@ -256,7 +256,8 @@ def put_layout(request: LayoutRequest):
 @app.put("/api/output")
 def put_output(request: OutputRequest):
     project = folder(request.project)
-    try: output = normalize_output_settings(request.model_dump())
+    source = read_json(project / "source.json", {})
+    try: output = fit_output_crops(request.model_dump(), source)
     except ValueError as error: raise HTTPException(400, str(error)) from error
     settings = read_json(project / "settings.json", {})
     settings.update(output); write_json(project / "settings.json", settings)

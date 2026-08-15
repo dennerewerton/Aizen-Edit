@@ -49,6 +49,44 @@ def normalize_output_settings(value: dict | None) -> dict:
     }
 
 
+def _fit_crop_aspect(region: dict, aspect: float) -> dict:
+    """Fit a normalized crop to a physical aspect ratio, keeping its centre."""
+    center_x = region["x"] + region["width"] / 2
+    center_y = region["y"] + region["height"] / 2
+    # Keep the chosen width when possible.  This expands old, shallow webcam
+    # rectangles vertically instead of making the webcam smaller.
+    width = min(1.0, region["width"])
+    height = width / aspect
+    if height > 1:
+        height = 1.0
+        width = height * aspect
+    x = max(0.0, min(1.0 - width, center_x - width / 2))
+    y = max(0.0, min(1.0 - height, center_y - height / 2))
+    return {"x": x, "y": y, "width": width, "height": height}
+
+
+def fit_output_crops(settings: dict, source: dict) -> dict:
+    """Make vertical source rectangles match their output aspect ratios.
+
+    Crop values are normalized, so their width/height ratio must account for
+    the source video aspect ratio.  A 16:9 crop in a 16:9 source is therefore
+    a square *normalized* rectangle, not 16/9.
+    """
+    profile = normalize_output_settings(settings)
+    if profile["output_format"] != "9:16":
+        return profile
+    try:
+        source_aspect = float(source["width"]) / float(source["height"])
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        return profile
+    targets = {"gameplay": 1080 / (1312 if profile["vertical_mode"] == "top_split" else 1920)}
+    if profile["vertical_mode"] == "top_split":
+        targets["webcam"] = 16 / 9
+    for name, target_aspect in targets.items():
+        profile["crops"][name] = _fit_crop_aspect(profile["crops"][name], target_aspect / source_aspect)
+    return profile
+
+
 def output_size(source: dict, settings: dict) -> tuple[int, int]:
     if settings.get("output_format") == "9:16":
         return 1080, 1920
