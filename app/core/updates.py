@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from threading import Thread
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from .version import VERSION
@@ -28,6 +29,10 @@ def check_for_update(settings: dict) -> dict:
         request = Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "Aizen-Auto-Editor"})
         with urlopen(request, timeout=5) as response:
             release = json.loads(response.read().decode("utf-8"))
+    except HTTPError as error:
+        if error.code == 404:
+            return {"configured": True, "current_version": VERSION, "available": False, "status": "Nenhuma atualização publicada ainda."}
+        return {"configured": True, "current_version": VERSION, "available": False, "status": "Não foi possível verificar atualizações agora."}
     except Exception:
         return {"configured": True, "current_version": VERSION, "available": False, "status": "Não foi possível verificar atualizações agora."}
     latest = str(release.get("tag_name", "")).lstrip("v")
