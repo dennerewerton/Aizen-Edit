@@ -21,6 +21,7 @@ from app.core.probe import _ratio
 from app.core.ranking import score_event
 from app.core.renderer import encoder_options, segment_command, subtitle_style
 from app.core.output import fit_output_crops, normalize_output_settings, output_size
+from app.core.captions import read_srt_entries, write_manual_srt
 from app.core.verify import expected_edl_duration
 from app.core.speech import transcript_events
 from app.core.transcription import FasterWhisperTranscriber
@@ -179,6 +180,12 @@ def test_top_split_webcam_crop_is_16_by_9_in_source_pixels():
     webcam = profile["crops"]["webcam"]
     physical_aspect = webcam["width"] * 1920 / (webcam["height"] * 1080)
     assert abs(physical_aspect - 16 / 9) < .0001
+
+
+def test_manual_captions_round_trip(tmp_path):
+    output = tmp_path / "manual.srt"
+    assert write_manual_srt([{"start": .5, "end": 1.8, "text": "Boa\njogada!"}], output) == 1
+    assert read_srt_entries(output) == [{"start": .5, "end": 1.8, "text": "Boa\njogada!"}]
 
 
 def test_hardware_encoder_options_are_h264_amf_specific():

@@ -40,6 +40,10 @@ Foi validado o pipeline completo com `C:\Users\Aizen\Videos\2026-08-07 11-23-25.
 5. Clique em **Analisar vídeo**, revise os momentos e desmarque os indesejados.
 6. Clique em **Gerar edição (EDL)**, depois **Gerar preview** ou **Renderizar final**.
 
+### Editor básico
+
+Após montar a edição, a área **Ajustar edição** permite corrigir o início e fim dos cortes, remover, adicionar ou reordenar trechos, além de editar texto e tempo das legendas. Clique em **Salvar alterações** antes de gerar o preview ou o vídeo final. Essas mudanças ficam somente no projeto; o vídeo original nunca é alterado.
+
 ## Aplicativo Windows
 
 Para abrir em uma janela nativa, sem terminal e sem precisar abrir o navegador, use **`Aizen Auto Editor.bat`**. Para gerar um executável distribuível, execute `build-windows.bat`; o resultado fica em `dist\Aizen Auto Editor\Aizen Auto Editor.exe`.

@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from .core.audio import analyze_audio, audio_features_are_finite
 from .core.assets import list_sfx, sfx_path
-from .core.captions import build_srt
+from .core.captions import build_srt, read_srt_entries, write_manual_srt
 from .core.edl import automatic_target_duration, make_edl, validate_highlights
 from .core.effects import validate_effect
 from .core.gameplay import analyze_gameplay, build_activity_score, detect_dead_zones, detect_events, detect_outcome_candidates, sanitize_activity, save_debug_frames
@@ -38,6 +38,7 @@ class HighlightsRequest(BaseModel): project: str; highlights: list[dict]
 class ProjectRequest(BaseModel): project: str
 class LayoutRequest(BaseModel): project: str; layout: dict
 class OutputRequest(BaseModel): project: str; output_format: str; vertical_mode: str = "full"; crops: dict = {}
+class EditorRequest(BaseModel): project: str; segments: list[dict]; captions: list[dict] = []
 
 
 @app.get("/api/health")
@@ -82,7 +83,8 @@ def open_project(project: str):
     activity = read_json(activity_path, [])
     repaired_activity = sanitize_activity(activity)
     if repaired_activity != activity: write_json(activity_path, repaired_activity)
-    return {"project": str(base), "source": read_json(base / "source.json"), "settings": read_json(base / "settings.json", {}), "layout": load_layout(base), "highlights": read_json(base / "highlights.json", []), "events": read_json(base / "gameplay_events.json", []), "activity": repaired_activity, "dead_zones": read_json(base / "dead_zones.json", []), "has_edl": (base / "edl.json").exists()}
+    edl = read_json(base / "edl.json", {})
+    return {"project": str(base), "source": read_json(base / "source.json"), "settings": read_json(base / "settings.json", {}), "layout": load_layout(base), "highlights": read_json(base / "highlights.json", []), "events": read_json(base / "gameplay_events.json", []), "activity": repaired_activity, "dead_zones": read_json(base / "dead_zones.json", []), "edl": edl, "captions": read_srt_entries(Path(edl["subtitles"])) if edl.get("subtitles") else [], "has_edl": bool(edl)}
 
 
 @app.post("/api/pick-video")
@@ -180,7 +182,42 @@ def save_edl(request: HighlightsRequest):
         for h in request.highlights:
             decision = "favorite" if h.get("favorite") else ("keep" if h.get("selected") else "remove")
             output.write(json.dumps({"highlight_id": h["id"], "decision": decision, "features": {"score": h["score"], "events": h["events"]}}, ensure_ascii=False) + "\n")
-    return edl
+    return {**edl, "captions": read_srt_entries(subtitle_path) if edl.get("subtitles") else []}
+
+
+@app.put("/api/editor")
+def save_editor(request: EditorRequest):
+    """Save basic manual cut and caption changes without touching the original."""
+    project = folder(request.project)
+    source = read_json(project / "source.json")
+    if not request.segments:
+        raise HTTPException(400, "Mantenha pelo menos um trecho na edição.")
+    normalized = []
+    for index, segment in enumerate(request.segments):
+        try:
+            start, end = float(segment["start"]), float(segment["end"])
+        except (KeyError, TypeError, ValueError) as error:
+            raise HTTPException(400, "Os cortes precisam ter início e fim válidos.") from error
+        if start < 0 or end <= start or end > float(source["duration"]) + .001:
+            raise HTTPException(400, "Um corte está fora da duração do vídeo original.")
+        normalized.append({"source": source["path"], "start": start, "end": end, "reason": str(segment.get("reason", "Ajuste manual")), "score": float(segment.get("score", 0)), "highlight_id": str(segment.get("highlight_id", f"manual-{index + 1}")), "effects": segment.get("effects", []), "sfx": segment.get("sfx")})
+    captions = request.captions
+    total = sum(item["end"] - item["start"] for item in normalized)
+    try:
+        for caption in captions:
+            if float(caption["start"]) < 0 or float(caption["end"]) > total + .001:
+                raise ValueError("Legenda fora da duração da edição.")
+        subtitle_path = project / "subtitles.srt"
+        caption_count = write_manual_srt(captions, subtitle_path)
+    except (KeyError, TypeError, ValueError) as error:
+        raise HTTPException(400, str(error)) from error
+    old = read_json(project / "edl.json", {})
+    edl = {"version": 1, "fps_rational": source["fps_rational"], "segments": normalized, "subtitles": str(subtitle_path) if caption_count else None, "total_duration": round(total, 3)}
+    if old.get("subtitles") and not caption_count:
+        subtitle_path.unlink(missing_ok=True)
+    write_json(project / "edl.json", edl)
+    append_log(project, f"Editor salvo: {len(normalized)} cortes e {caption_count} legendas")
+    return {"edl": edl, "captions": read_srt_entries(subtitle_path) if caption_count else []}
 
 
 @app.post("/api/render/{kind}")

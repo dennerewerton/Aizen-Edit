@@ -45,5 +45,15 @@
 
   <section class="panel progress-panel"><div class="panel-heading"><div><p class="eyebrow">STATUS</p><h2>Progresso</h2></div></div><ol id="log"><li>○ Aguardando vídeo</li></ol></section>
   <section id="results" class="panel" hidden><div class="panel-heading"><div><p class="eyebrow">REVISÃO</p><h2>Momentos selecionados</h2></div></div><p id="warning" class="warning"></p><div id="timeline" class="timeline" aria-label="Timeline de atividade e highlights"></div><div id="highlights"></div></section>
+  <section id="editor" class="panel video-editor" hidden>
+    <div class="panel-heading"><div><p class="eyebrow">EDITOR BÁSICO</p><h2>Ajustar edição</h2></div><span id="editor-duration" class="muted"></span></div>
+    <p class="helper">Corrija cortes e legendas antes de gerar o vídeo. As alterações só afetam esta edição.</p>
+    <div class="editor-layout">
+      <div class="editor-preview"><video id="editor-video" controls></video><div class="editor-tools"><button id="add-cut" class="secondary">+ Adicionar corte no ponto atual</button><button id="save-editor" class="primary">Salvar alterações</button></div></div>
+      <aside class="clip-inspector"><p class="eyebrow">CORTE SELECIONADO</p><div id="clip-empty" class="muted">Selecione um corte na timeline.</div><div id="clip-fields" hidden><label>Início <input id="clip-start" type="number" min="0" step="0.1"></label><label>Fim <input id="clip-end" type="number" min="0" step="0.1"></label><label>Nome <input id="clip-reason" maxlength="60"></label><div class="inspector-actions"><button id="clip-up" title="Mover para antes">←</button><button id="clip-down" title="Mover para depois">→</button><button id="clip-delete" class="danger">Remover</button></div></div></aside>
+    </div>
+    <div class="edit-timeline-wrap"><div class="edit-ruler"><span>Timeline da edição</span><span id="edit-ruler-end">0:00</span></div><div id="edit-timeline" class="edit-timeline" aria-label="Timeline de cortes"></div></div>
+    <div class="caption-editor"><div class="panel-heading"><div><p class="eyebrow">LEGENDAS</p><h3>Texto e tempo</h3></div><button id="add-caption" class="secondary">+ Legenda</button></div><div id="caption-list" class="caption-list"></div></div>
+  </section>
   <section id="player" class="panel" hidden><div class="panel-heading"><div><p class="eyebrow">REPRODUÇÃO</p><h2>Player</h2></div></div><video controls></video></section>
 </main><script src="/static/app.js"></script></body></html>

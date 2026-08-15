@@ -37,6 +37,44 @@ def build_srt(transcript: dict, segments: list[dict], output: Path, mode: str) -
     return len(entries)
 
 
+def write_manual_srt(entries: list[dict], output: Path) -> int:
+    """Persist user-edited captions on the assembled (not source) timeline."""
+    blocks = []
+    for index, entry in enumerate(entries, 1):
+        start, end = float(entry["start"]), float(entry["end"])
+        text = str(entry["text"]).strip()
+        if start < 0 or end <= start or not text:
+            raise ValueError("Cada legenda precisa ter texto e um intervalo válido.")
+        blocks.append(f"{index}\n{srt_timestamp(start)} --> {srt_timestamp(end)}\n{text}\n")
+    if not blocks:
+        output.unlink(missing_ok=True)
+        return 0
+    output.write_text("\n".join(blocks), encoding="utf-8")
+    return len(blocks)
+
+
+def read_srt_entries(path: Path) -> list[dict]:
+    """Read our compact SRT format back into editable timeline entries."""
+    if not path.is_file():
+        return []
+    entries = []
+    for block in path.read_text(encoding="utf-8-sig").strip().split("\n\n"):
+        lines = block.splitlines()
+        if len(lines) < 3 or " --> " not in lines[1]:
+            continue
+        try:
+            start, end = (_parse_timestamp(value) for value in lines[1].split(" --> "))
+        except ValueError:
+            continue
+        entries.append({"start": start, "end": end, "text": "\n".join(lines[2:]).strip()})
+    return entries
+
+
+def _parse_timestamp(value: str) -> float:
+    hours, minutes, seconds = value.strip().replace(",", ".").split(":")
+    return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+
+
 def _caption_chunks(phrase: dict, clip_start: float, clip_end: float) -> list[tuple[float, float, str]]:
     phrase_start, phrase_end = max(float(phrase["start"]), clip_start), min(float(phrase["end"]), clip_end)
     tokens = []
