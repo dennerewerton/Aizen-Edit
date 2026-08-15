@@ -22,6 +22,7 @@ from app.core.ranking import score_event
 from app.core.renderer import encoder_options, segment_command, subtitle_style
 from app.core.output import fit_output_crops, normalize_output_settings, output_size
 from app.core.captions import read_srt_entries, write_manual_srt
+from app.core.updates import _version
 from app.core.verify import expected_edl_duration
 from app.core.speech import transcript_events
 from app.core.transcription import FasterWhisperTranscriber
@@ -188,6 +189,11 @@ def test_manual_captions_round_trip(tmp_path):
     assert read_srt_entries(output) == [{"start": .5, "end": 1.8, "text": "Boa\njogada!"}]
 
 
+def test_update_version_comparison_ignores_v_prefix_and_prerelease():
+    assert _version("v0.2.0") == (0, 2, 0)
+    assert _version("1.3.4-beta") == (1, 3, 4)
+
+
 def test_hardware_encoder_options_are_h264_amf_specific():
     assert encoder_options("h264_amf", 4) == ["-c:v", "h264_amf", "-quality", "quality", "-rc", "cqp", "-qp_i", "20", "-qp_p", "22", "-threads", "4"]
 
@@ -211,7 +217,8 @@ def test_job_status_is_serializable():
 
 
 def test_local_health_endpoint_identifies_this_application():
-    assert health() == {"app": "Aizen Auto Editor", "status": "ok"}
+    assert health()["app"] == "Aizen Auto Editor"
+    assert health()["status"] == "ok" and health()["version"] == "0.2.0"
 
 
 def test_transcript_events_detect_reaction_and_pause():

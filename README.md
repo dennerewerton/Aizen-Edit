@@ -48,6 +48,10 @@ Após montar a edição, a área **Ajustar edição** permite corrigir o início
 
 Para abrir em uma janela nativa, sem terminal e sem precisar abrir o navegador, use **`Aizen Auto Editor.bat`**. Para gerar um executável distribuível, execute `build-windows.bat`; o resultado fica em `dist\Aizen Auto Editor\Aizen Auto Editor.exe`.
 
+Para gerar o instalador profissional do Windows, instale o **Inno Setup 6** e execute `build-installer.bat`. O instalador coloca o aplicativo em Arquivos de Programas, cria atalho no menu Iniciar e deixa projetos, vídeos gerados e assets do usuário em `%LOCALAPPDATA%\Aizen Auto Editor`, onde o programa tem permissão de escrita.
+
+O aplicativo consulta automaticamente os **Releases** de `dennerewerton/Aizen-Edit` ao iniciar. Publique uma Release com a tag da versão (por exemplo, `v0.2.0`) e o arquivo `Aizen-Auto-Editor-Setup.exe`; quando houver uma versão mais nova, o aviso na parte superior do app permite instalar e reiniciar.
+
 Quando há uma duração definida, o editor prioriza os highlights de maior score até o limite aproximado e sempre os organiza na ordem cronológica da gameplay.
 
 No modo de duração **Automática**, vídeos com até dois minutos recebem uma edição proporcionalmente curta (em vez de contexto excessivo). O limite e o contexto para esses vídeos ficam configuráveis em `config/freefire.json`.

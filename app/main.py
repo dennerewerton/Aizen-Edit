@@ -25,6 +25,8 @@ from .core.renderer import render
 from .core.speech import transcript_events
 from .core.thumbnails import create_frame, create_thumbnail
 from .core.transcription import transcribe_local
+from .core.updates import check_for_update, install_update
+from .core.version import VERSION
 from .core.verify import expected_edl_duration, verify_render
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(message)s", datefmt="%H:%M:%S")
@@ -39,10 +41,24 @@ class ProjectRequest(BaseModel): project: str
 class LayoutRequest(BaseModel): project: str; layout: dict
 class OutputRequest(BaseModel): project: str; output_format: str; vertical_mode: str = "full"; crops: dict = {}
 class EditorRequest(BaseModel): project: str; segments: list[dict]; captions: list[dict] = []
+class UpdateInstallRequest(BaseModel): download_url: str
 
 
 @app.get("/api/health")
-def health(): return {"app": "Aizen Auto Editor", "status": "ok"}
+def health(): return {"app": "Aizen Auto Editor", "version": VERSION, "status": "ok"}
+
+
+@app.get("/api/update")
+def update_status(): return check_for_update(read_json(CONFIG / "update.json", {}))
+
+
+@app.post("/api/update/install")
+def update_install(request: UpdateInstallRequest):
+    status = check_for_update(read_json(CONFIG / "update.json", {}))
+    if not status.get("available") or request.download_url != status.get("download_url"):
+        raise HTTPException(400, "A atualização não está disponível.")
+    install_update(request.download_url)
+    return {"started": True}
 
 
 def folder(value: str) -> Path:

@@ -7,6 +7,8 @@ from urllib.request import urlopen
 import uvicorn
 import webview
 
+from .core.version import APP_NAME, VERSION
+
 HOST = "127.0.0.1"
 
 def _available_port() -> int:
@@ -30,7 +32,7 @@ def run() -> None:
     port = _available_port()
     Thread(target=_serve, args=(port,), daemon=True).start()
     if not _ready(port): raise RuntimeError("Não foi possível iniciar o Aizen Auto Editor localmente.")
-    webview.create_window("Aizen Auto Editor", f"http://{HOST}:{port}", width=1360, height=900, min_size=(980, 700), background_color="#08111d")
+    webview.create_window(f"{APP_NAME} {VERSION}", f"http://{HOST}:{port}", width=1360, height=900, min_size=(980, 700), background_color="#08111d")
     webview.start(gui="edgechromium", debug=False)
 
 if __name__ == "__main__": run()
