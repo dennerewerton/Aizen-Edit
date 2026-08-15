@@ -96,7 +96,10 @@ def analyze(request: ProjectRequest):
         transcription_config = defaults["transcription"]
         transcript = read_json(transcript_path)
         if not transcript or transcript.get("engine") == "unavailable":
-            transcript = transcribe_local(video, transcription_config["model"], transcription_config["device"], transcription_config["compute_type"])
+            def transcription_progress(fraction: float) -> None:
+                elapsed = max(0, min(source["duration"], source["duration"] * fraction))
+                job.update(f"Transcrevendo fala: {elapsed / 60:.1f} / {source['duration'] / 60:.1f} min", 10 + round(18 * fraction))
+            transcript = transcribe_local(video, transcription_config["model"], transcription_config["device"], transcription_config["compute_type"], int(transcription_config.get("cpu_threads", 0)), source["duration"], transcription_progress, job.cancelled)
             write_json(transcript_path, transcript)
         (project / "transcript.txt").write_text("\n".join(s.get("text", "") for s in transcript["segments"]), encoding="utf-8")
         if job.cancelled.is_set(): return {}

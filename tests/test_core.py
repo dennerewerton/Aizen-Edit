@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from app.core.edl import automatic_target_duration, edl_duration, make_edl, validate_highlights
 from app.core.effects import filters_for_effects, validate_effect, windowed_video_filtergraph
 from app.core.captions import build_srt, srt_timestamp
@@ -19,6 +21,7 @@ from app.core.ranking import score_event
 from app.core.renderer import encoder_options, segment_command, subtitle_style
 from app.core.verify import expected_edl_duration
 from app.core.speech import transcript_events
+from app.core.transcription import FasterWhisperTranscriber
 
 
 def test_fps_rational_parsing():
@@ -181,6 +184,18 @@ def test_transcript_events_promote_free_fire_callouts_and_reduce_filler():
     events = transcript_events({"segments": [{"start": 0, "end": 1, "text": "Tá ali, tá ali"}, {"start": 1, "end": 2, "text": "entendi"}]})
     assert events[0]["type"] == "reaction" and events[0]["signals"]["speech_interest"] >= .8
     assert events[1]["type"] == "conversation" and events[1]["confidence"] < .2
+
+
+def test_transcription_reports_source_timeline_progress_without_loading_model():
+    class Segment:
+        def __init__(self, start, end): self.start, self.end, self.text, self.words = start, end, "fala", []
+    class Info: language = "pt"
+    class Model:
+        def transcribe(self, *_args, **_kwargs): return iter([Segment(0, 2), Segment(2, 8)]), Info()
+    transcriber = object.__new__(FasterWhisperTranscriber); transcriber.model = Model()
+    updates = []
+    result = transcriber.transcribe(Path("video.mp4"), duration=10, progress=updates.append)
+    assert result["language"] == "pt" and updates == [.2, .8]
 
 
 def test_adaptive_combat_threshold_finds_relative_action_burst():
