@@ -3,9 +3,9 @@ from pathlib import Path
 from app.core.edl import automatic_target_duration, edl_duration, make_edl, validate_highlights
 from app.core.effects import filters_for_effects, validate_effect, windowed_video_filtergraph
 from app.core.captions import build_srt, srt_timestamp
-from app.core.gameplay import normalized_to_pixels, detect_dead_zones, detect_events, detect_outcome_candidates, save_debug_frames
+from app.core.gameplay import normalized_to_pixels, detect_dead_zones, detect_events, detect_outcome_candidates, sanitize_activity, save_debug_frames
 from app.core.gameplay import build_activity_score
-from app.core.audio import _times
+from app.core.audio import _times, audio_features_are_finite
 from app.core.highlights import group_events
 from app.core.highlights import build_highlights, style_highlight_settings
 from app.core.layout import validate_layout
@@ -260,6 +260,12 @@ def test_local_llm_is_off_without_model():
 
 def test_audio_timeline_uses_requested_step():
     assert list(_times(2.1, 1.0)) == [0.0, 1.0, 2.0]
+
+
+def test_nonfinite_audio_and_legacy_activity_are_repaired():
+    assert not audio_features_are_finite([{"time": 0, "energy": float("nan")}])
+    repaired = sanitize_activity([{"time": 0, "activity": float("nan"), "audio": float("inf"), "motion": .2, "speech": 0}])
+    assert repaired == [{"time": 0, "activity": 0.0, "audio": 0.0, "motion": .2, "speech": 0}]
 
 
 def test_highlights_are_clamped_to_source_duration():

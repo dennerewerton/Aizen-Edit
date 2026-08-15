@@ -8,12 +8,12 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .core.audio import analyze_audio
+from .core.audio import analyze_audio, audio_features_are_finite
 from .core.assets import list_sfx, sfx_path
 from .core.captions import build_srt
 from .core.edl import automatic_target_duration, make_edl, validate_highlights
 from .core.effects import validate_effect
-from .core.gameplay import analyze_gameplay, build_activity_score, detect_dead_zones, detect_events, detect_outcome_candidates, save_debug_frames
+from .core.gameplay import analyze_gameplay, build_activity_score, detect_dead_zones, detect_events, detect_outcome_candidates, sanitize_activity, save_debug_frames
 from .core.highlights import build_highlights, style_highlight_settings
 from .core.jobs import JobManager
 from .core.layout import load_layout, save_layout
@@ -70,7 +70,11 @@ def available_sfx(): return list_sfx()
 @app.get("/api/project")
 def open_project(project: str):
     base = folder(project)
-    return {"project": str(base), "source": read_json(base / "source.json"), "settings": read_json(base / "settings.json", {}), "layout": load_layout(base), "highlights": read_json(base / "highlights.json", []), "events": read_json(base / "gameplay_events.json", []), "activity": read_json(base / "activity_score.json", []), "dead_zones": read_json(base / "dead_zones.json", []), "has_edl": (base / "edl.json").exists()}
+    activity_path = base / "activity_score.json"
+    activity = read_json(activity_path, [])
+    repaired_activity = sanitize_activity(activity)
+    if repaired_activity != activity: write_json(activity_path, repaired_activity)
+    return {"project": str(base), "source": read_json(base / "source.json"), "settings": read_json(base / "settings.json", {}), "layout": load_layout(base), "highlights": read_json(base / "highlights.json", []), "events": read_json(base / "gameplay_events.json", []), "activity": repaired_activity, "dead_zones": read_json(base / "dead_zones.json", []), "has_edl": (base / "edl.json").exists()}
 
 
 @app.post("/api/pick-video")
@@ -105,7 +109,7 @@ def analyze(request: ProjectRequest):
         if job.cancelled.is_set(): return {}
         job.update("Extraindo atividade de áudio", 30); append_log(project, "Extraindo atividade de áudio"); audio = read_json(project / "audio_features.json")
         expected_audio_windows = math.ceil(source["duration"] / defaults["analysis_sample_seconds"]) + 2
-        if not audio or len(audio) > expected_audio_windows:
+        if not audio or len(audio) > expected_audio_windows or not audio_features_are_finite(audio):
             sample_rate = source["audio"]["sample_rate"] if source["audio"] else 48_000
             audio = analyze_audio(video, source["duration"], defaults["analysis_sample_seconds"], sample_rate)
             write_json(project / "audio_features.json", audio)
@@ -127,8 +131,9 @@ def analyze(request: ProjectRequest):
         highlights = build_highlights(events, game["weights"], highlight_settings, source["duration"], dead_zones)
         debug_frames = save_debug_frames(video, visual_events + outcome_candidates, project / "debug")
         job.update("Gerando thumbnails", 88)
-        for highlight in highlights:
+        for index, highlight in enumerate(highlights, 1):
             if job.cancelled.is_set(): return {}
+            job.update(f"Gerando thumbnails ({index}/{len(highlights)})", 88 + int(8 * index / max(1, len(highlights))))
             thumbnail = project / "thumbnails" / f"{highlight['id']}.jpg"
             if create_thumbnail(video, highlight["start"], thumbnail): highlight["thumbnail"] = thumbnail.name
         write_json(project / "highlights.json", highlights); append_log(project, f"Análise concluída ({settings.get('edit_type', 'automatic')}): {len(highlights)} highlights; {len(dead_zones)} zonas mortas")

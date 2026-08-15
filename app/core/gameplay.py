@@ -1,4 +1,5 @@
 from pathlib import Path
+from math import isfinite
 
 import cv2
 
@@ -127,6 +128,17 @@ def build_activity_score(visual: list[dict], audio: list[dict], transcript: dict
         item = {"time": time, "activity": round(activity, 4), "motion": point["motion"], "audio": sound, "speech": float(speech)}
         if point.get("hud"): item["hud"] = max(point["hud"].values(), default=0.0)
         result.append(item)
+    return result
+
+
+def sanitize_activity(activity: list[dict]) -> list[dict]:
+    """Repair legacy analysis files that contain FFmpeg's non-finite silence values."""
+    result = []
+    for point in activity:
+        cleaned = dict(point)
+        for key in ("time", "activity", "motion", "audio", "speech", "hud"):
+            if key in cleaned and not isfinite(float(cleaned[key])): cleaned[key] = 0.0
+        result.append(cleaned)
     return result
 
 
