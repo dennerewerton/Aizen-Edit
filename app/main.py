@@ -38,6 +38,10 @@ class ProjectRequest(BaseModel): project: str
 class LayoutRequest(BaseModel): project: str; layout: dict
 
 
+@app.get("/api/health")
+def health(): return {"app": "Aizen Auto Editor", "status": "ok"}
+
+
 def folder(value: str) -> Path:
     candidate = Path(value).resolve()
     projects = PROJECTS.resolve()

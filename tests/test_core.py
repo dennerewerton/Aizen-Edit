@@ -22,6 +22,7 @@ from app.core.renderer import encoder_options, segment_command, subtitle_style
 from app.core.verify import expected_edl_duration
 from app.core.speech import transcript_events
 from app.core.transcription import FasterWhisperTranscriber
+from app.main import health
 
 
 def test_fps_rational_parsing():
@@ -173,6 +174,10 @@ def test_job_status_is_serializable():
     job = manager.start("project", "test", lambda current: {"ok": True})
     snapshot = job.snapshot()
     assert snapshot["id"] == job.id and "cancelled" not in snapshot
+
+
+def test_local_health_endpoint_identifies_this_application():
+    assert health() == {"app": "Aizen Auto Editor", "status": "ok"}
 
 
 def test_transcript_events_detect_reaction_and_pause():
