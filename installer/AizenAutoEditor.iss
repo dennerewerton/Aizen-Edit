@@ -1,5 +1,5 @@
 #define AppName "Aizen Auto Editor"
-#define AppVersion "0.2.1"
+#define AppVersion "0.2.2"
 #define AppPublisher "Aizen"
 #define AppExeName "Aizen Auto Editor.exe"
 
@@ -15,6 +15,7 @@ OutputBaseFilename=Aizen-Auto-Editor-Setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\assets\aizen-stream-control.ico
 UninstallDisplayIcon={app}\{#AppExeName}
 CloseApplications=yes
 RestartApplications=yes
@@ -30,4 +31,4 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: deskto
 Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; GroupDescription: "Atalhos:"; Flags: unchecked
 
 [Run]
-Filename: "{app}\{#AppExeName}"; Description: "Abrir o Aizen Auto Editor"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExeName}"; Description: "Abrir o Aizen Auto Editor"; Flags: nowait postinstall

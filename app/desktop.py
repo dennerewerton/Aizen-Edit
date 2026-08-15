@@ -8,6 +8,9 @@ import uvicorn
 import webview
 
 from app.core.version import APP_NAME, VERSION
+from app.core.paths import CONFIG
+from app.core.project import read_json
+from app.core.updates import install_update_before_start
 
 HOST = "127.0.0.1"
 
@@ -29,6 +32,8 @@ def _ready(port: int, timeout: float = 12) -> bool:
     return False
 
 def run() -> None:
+    if install_update_before_start(read_json(CONFIG / "update.json", {})):
+        return
     port = _available_port()
     Thread(target=_serve, args=(port,), daemon=True).start()
     if not _ready(port): raise RuntimeError("Não foi possível iniciar o Aizen Auto Editor localmente.")

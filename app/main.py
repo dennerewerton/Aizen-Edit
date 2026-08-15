@@ -41,7 +41,7 @@ class ProjectRequest(BaseModel): project: str
 class LayoutRequest(BaseModel): project: str; layout: dict
 class OutputRequest(BaseModel): project: str; output_format: str; vertical_mode: str = "full"; crops: dict = {}
 class EditorRequest(BaseModel): project: str; segments: list[dict]; captions: list[dict] = []
-class UpdateInstallRequest(BaseModel): download_url: str
+class UpdateInstallRequest(BaseModel): download_url: str; sha256: str | None = None
 
 
 @app.get("/api/health")
@@ -57,7 +57,7 @@ def update_install(request: UpdateInstallRequest):
     status = check_for_update(read_json(CONFIG / "update.json", {}))
     if not status.get("available") or request.download_url != status.get("download_url"):
         raise HTTPException(400, "A atualização não está disponível.")
-    install_update(request.download_url)
+    install_update(request.download_url, status.get("sha256"))
     return {"started": True}
 
 

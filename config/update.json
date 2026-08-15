@@ -1,4 +1,5 @@
 {
   "github_repository": "dennerewerton/Aizen-Edit",
-  "installer_asset": "Aizen-Auto-Editor-Setup.exe"
+  "installer_asset": "Aizen-Auto-Editor-Setup.exe",
+  "auto_install": true
 }

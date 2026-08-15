@@ -190,7 +190,7 @@ def test_manual_captions_round_trip(tmp_path):
 
 
 def test_update_version_comparison_ignores_v_prefix_and_prerelease():
-    assert _version("v0.2.1") == (0, 2, 1)
+    assert _version("v0.2.2") == (0, 2, 2)
     assert _version("1.3.4-beta") == (1, 3, 4)
 
 
@@ -218,7 +218,7 @@ def test_job_status_is_serializable():
 
 def test_local_health_endpoint_identifies_this_application():
     assert health()["app"] == "Aizen Auto Editor"
-    assert health()["status"] == "ok" and health()["version"] == "0.2.1"
+    assert health()["status"] == "ok" and health()["version"] == "0.2.2"
 
 
 def test_transcript_events_detect_reaction_and_pause():
