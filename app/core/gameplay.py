@@ -17,9 +17,10 @@ def analyze_gameplay(path: Path, sample_seconds: float = 1.0, layout: dict | Non
         ok, frame = cap.read()
         if not ok: break
         if index % frame_step == 0:
-            small = cv2.resize(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), (160, 90))
+            color_small = cv2.resize(frame, (160, 90))
+            small = cv2.cvtColor(color_small, cv2.COLOR_BGR2GRAY)
             motion = 0.0 if previous is None else float(cv2.absdiff(small, previous).mean() / 255.0)
-            point = {"time": round(index / fps, 3), "motion": round(min(motion * 7, 1.0), 4)}
+            point = {"time": round(index / fps, 3), "motion": round(min(motion * 4, 1.0), 4), "round_result": _round_result_score(color_small)}
             hud, current_rois = _hud_changes(small, previous_rois, (layout or {}).get("regions", {}))
             if hud: point["hud"] = hud
             previous_rois = current_rois
@@ -28,6 +29,26 @@ def analyze_gameplay(path: Path, sample_seconds: float = 1.0, layout: dict | Non
         index += 1
     cap.release()
     return scores
+
+
+def _round_result_score(frame) -> float:
+    """Find Free Fire's blue-left/orange-right round scoreboard without OCR."""
+    height, width = frame.shape[:2]
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    band = hsv[int(.29 * height):int(.44 * height), int(.15 * width):int(.85 * width)]
+    if not band.size: return 0.0
+    hue, saturation, value = cv2.split(band)
+    middle = band.shape[1] // 2
+    blue = (hue > 82) & (hue < 136) & (saturation > 100) & (value > 65)
+    warm = (hue < 38) & (saturation > 100) & (value > 65)
+    left_blue, left_warm = blue[:, :middle].mean(), warm[:, :middle].mean()
+    right_blue, right_warm = blue[:, middle:].mean(), warm[:, middle:].mean()
+    upper = hsv[int(.20 * height):int(.29 * height), int(.15 * width):int(.85 * width)]
+    dark_upper = (upper[:, :, 2] < 55).mean() if upper.size else 0.0
+    # Requiring opposite team colors in their expected halves plus the dark
+    # background rejects blue sky, water and orange terrain during gameplay.
+    geometry = min(left_blue - left_warm, right_warm - right_blue, dark_upper)
+    return round(float(max(0.0, geometry)), 4)
 
 
 def _hud_changes(frame, previous: dict, regions: dict) -> tuple[dict, dict]:
@@ -58,14 +79,20 @@ def detect_events(visual: list[dict], audio: list[dict], threshold: float = 0.55
     # floor so a uniformly quiet menu is not mislabeled as combat.
     ordered = sorted(scored)
     upper_band = ordered[min(len(ordered) - 1, int(len(ordered) * .82))] if ordered else threshold
-    adaptive_threshold = min(threshold, max(threshold * .45, upper_band))
+    adaptive_threshold = max(threshold * .45, upper_band)
+    peak_threshold = ordered[min(len(ordered) - 1, int(len(ordered) * .95))] if ordered else adaptive_threshold
     events = []
     for point, combat in zip(visual, scored):
         sound = audio_by_time.get(round(point["time"]), 0.0)
         hud = point.get("hud", {})
+        round_result = point.get("round_result", 0.0)
+        signals = {"motion": point["motion"], "audio": sound, "speech": 0.0, "kill_feed": hud.get("kill_feed", 0.0), "hp": hud.get("hp", 0.0), "round_result": round_result}
         visual_confirmation = point["motion"] >= .075 or max(hud.values(), default=0.0) >= .12
-        if combat >= adaptive_threshold and visual_confirmation:
-            events.append({"start": point["time"], "end": point["time"] + 1.0, "type": "combat", "confidence": round(combat, 3), "signals": {"motion": point["motion"], "audio": sound, "speech": 0.0, "kill_feed": hud.get("kill_feed", 0.0), "hp": hud.get("hp", 0.0)}})
+        if round_result >= .42:
+            events.append({"start": max(0, point["time"] - 1.0), "end": point["time"] + 1.0, "type": "round_end", "confidence": round(min(1.0, .6 + round_result), 3), "signals": signals, "reason": "tela de fim de round após kill ou morte"})
+        elif combat >= adaptive_threshold and visual_confirmation:
+            kind = "combat_peak" if combat >= peak_threshold else "combat"
+            events.append({"start": point["time"], "end": point["time"] + 1.0, "type": kind, "confidence": round(combat, 3), "signals": signals})
         elif combat < 0.08:
             events.append({"start": point["time"], "end": point["time"] + 1.0, "type": "idle", "confidence": round(1 - combat, 3), "signals": {"motion": point["motion"], "audio": sound, "speech": 0.0, "kill_feed": hud.get("kill_feed", 0.0), "hp": hud.get("hp", 0.0)}})
     return events
@@ -75,7 +102,7 @@ def detect_outcome_candidates(events: list[dict]) -> list[dict]:
     """Conservative v1 candidates: calibrated HUD change is mandatory."""
     candidates = []
     for event in events:
-        if event["type"] != "combat": continue
+        if event["type"] not in {"combat", "combat_peak"}: continue
         signals = event["signals"]
         kill_feed, hp = signals.get("kill_feed", 0.0), signals.get("hp", 0.0)
         if kill_feed >= .15 and signals["motion"] >= .2 and signals["audio"] >= .15:
@@ -93,7 +120,7 @@ def save_debug_frames(path: Path, events: list[dict], directory: Path, maximum: 
     These are diagnostic artifacts only: labels say *candidate* and never turn a
     heuristic into a confirmed kill/death event.
     """
-    candidates = [event for event in events if event["type"] in {"combat", "kill_candidate", "death_candidate"}]
+    candidates = [event for event in events if event["type"] in {"combat", "combat_peak", "round_end", "kill_candidate", "death_candidate"}]
     if not candidates:
         return []
     directory.mkdir(parents=True, exist_ok=True)
@@ -124,7 +151,7 @@ def build_activity_score(visual: list[dict], audio: list[dict], transcript: dict
         time = point["time"]
         speech = any(float(segment["start"]) <= time <= float(segment["end"]) for segment in transcript.get("segments", []))
         sound = audio_by_time.get(round(time), 0.0)
-        activity = min(1.0, .5 * point["motion"] + .3 * sound + .2 * float(speech))
+        activity = max(point.get("round_result", 0.0), min(1.0, .5 * point["motion"] + .3 * sound + .2 * float(speech)))
         item = {"time": time, "activity": round(activity, 4), "motion": point["motion"], "audio": sound, "speech": float(speech)}
         if point.get("hud"): item["hud"] = max(point["hud"].values(), default=0.0)
         result.append(item)

@@ -120,7 +120,7 @@ def analyze(request: ProjectRequest):
         if job.cancelled.is_set(): return {}
         job.update("Analisando movimento da gameplay", 55); append_log(project, "Analisando movimento e HUD da gameplay"); layout = load_layout(project)
         state = read_json(project / "project.json", {})
-        analysis_signature = {"sample_seconds": defaults["analysis_sample_seconds"], "layout": layout}
+        analysis_signature = {"version": 3, "sample_seconds": defaults["analysis_sample_seconds"], "layout": layout}
         visual = read_json(project / "visual_features.json")
         if not visual or state.get("analysis_signature") != analysis_signature:
             visual = analyze_gameplay(video, defaults["analysis_sample_seconds"], layout)
@@ -140,6 +140,10 @@ def analyze(request: ProjectRequest):
             job.update(f"Gerando thumbnails ({index}/{len(highlights)})", 88 + int(8 * index / max(1, len(highlights))))
             thumbnail = project / "thumbnails" / f"{highlight['id']}.jpg"
             if create_thumbnail(video, highlight["start"], thumbnail): highlight["thumbnail"] = thumbnail.name
+        # A fresh analysis changes the cut candidates. Never let Preview/Final
+        # silently reuse an EDL and subtitle timeline from the previous result.
+        (project / "edl.json").unlink(missing_ok=True)
+        (project / "subtitles.srt").unlink(missing_ok=True)
         write_json(project / "highlights.json", highlights); append_log(project, f"Análise concluída ({settings.get('edit_type', 'automatic')}): {len(highlights)} highlights; {len(dead_zones)} zonas mortas")
         return {"highlights": highlights, "events": events, "activity": activity, "dead_zones": dead_zones, "debug_frames": debug_frames, "duration": source["duration"], "transcription": transcript.get("engine"), "warning": transcript.get("warning")}
     job = jobs.start(str(project), "analysis", work)

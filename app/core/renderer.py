@@ -76,9 +76,11 @@ def subtitle_style(layout: dict | None, output_size: tuple[int, int] | None) -> 
     # Bottom remains the preferred conventional location when it is equally safe.
     name, y = min(bands, key=lambda band: (obstruction(band[1]), -band[1]))
     height = (output_size or (1280, 720))[1]
-    if name == "top": return f"Alignment=8,MarginV={max(24, round(height * y))}"
-    if name == "middle": return "Alignment=5,MarginV=0"
-    return f"Alignment=2,MarginV={max(24, round(height * (1-y)))}"
+    font_size = 24 if height <= 720 else 32
+    appearance = f"FontName=Arial,FontSize={font_size},Bold=1,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2,Shadow=0"
+    if name == "top": return f"Alignment=8,MarginV={max(24, round(height * y))},{appearance}"
+    if name == "middle": return f"Alignment=5,MarginV=0,{appearance}"
+    return f"Alignment=2,MarginV={max(24, round(height * (1-y)))},{appearance}"
 
 
 def _subtitle_filter(path: Path, layout: dict | None = None, output_size: tuple[int, int] | None = None) -> str:

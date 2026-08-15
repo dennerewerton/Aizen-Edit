@@ -25,6 +25,10 @@ def automatic_target_duration(source_duration: float, settings: dict) -> float |
     """Keep a short source as a short edit instead of expanding it by default."""
     if source_duration <= settings.get("short_video_max_seconds", 0):
         return max(settings.get("short_video_min_target_seconds", 2.0), source_duration * settings.get("short_video_target_ratio", .6))
+    ratio = settings.get("long_video_target_ratio")
+    if ratio:
+        target = source_duration * ratio
+        return round(min(settings.get("long_video_max_target_seconds", target), max(settings.get("long_video_min_target_seconds", 0), target)), 3)
     return None
 
 

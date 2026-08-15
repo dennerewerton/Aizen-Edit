@@ -4,6 +4,8 @@ import re
 REACTION = re.compile(r"\b(kkk+|haha+|risos?|laugh(?:s|ter)?|grit[oa]|caralh[oa]|nossa|meu deus|eita|vish|boa|toma|capa|matei|derrubei)\b", re.I)
 TRASH_TALK = re.compile(r"\b(noob|lixo|ruim|amass[aei]|perdeu|chor[ae]|fraco|bot)\b", re.I)
 GAMEPLAY_CALLOUT = re.compile(r"\b(t[aá]\s+ali|ali|atr[aá]s|direita|esquerda|rush|safe|gelo|granada|inimigo|revive|loot|drop|tiro|bala)\b", re.I)
+KILL_CALLOUT = re.compile(r"\b(matei|matou|derrubei|derrubou|deitei|abati|peguei)\b", re.I)
+DEATH_CALLOUT = re.compile(r"\b(morri|morreu|me matou|fui de base|perdi)\b", re.I)
 
 
 def transcript_events(transcript: dict, pause_seconds: float = 1.5) -> list[dict]:
@@ -18,7 +20,11 @@ def transcript_events(transcript: dict, pause_seconds: float = 1.5) -> list[dict
             normalized = text.lower()
             words = re.findall(r"\w+", normalized, re.UNICODE)
             repeated_callout = len(words) >= 2 and len(set(words)) <= max(1, len(words) // 2)
-            if REACTION.search(normalized) or text.count("!") >= 2:
+            if DEATH_CALLOUT.search(normalized):
+                kind, confidence, interest = "death_candidate", .76, .95
+            elif KILL_CALLOUT.search(normalized):
+                kind, confidence, interest = "kill_candidate", .8, 1.0
+            elif REACTION.search(normalized) or text.count("!") >= 2:
                 kind, confidence, interest = "reaction", .72, .9
             elif TRASH_TALK.search(normalized):
                 kind, confidence, interest = "trash_talk", .68, .85

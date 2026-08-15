@@ -6,7 +6,7 @@ Editor local para transformar gameplays longas de Free Fire em uma sugestão de 
 
 O fluxo já está implementado: carregar vídeo → FFprobe → transcrição local opcional → análise leve de áudio/movimento → candidatos de combate v1 → highlights revisáveis → EDL → preview/final FFmpeg → validação de FPS, áudio e duração. Análise e renderização mostram etapa/porcentagem e podem ser canceladas.
 
-O detector de combate é heurístico (movimento + energia de áudio + HUD) e adapta o limite à faixa de atividade de cada gravação, sem transformar menus uniformemente quietos em combate. A transcrição também gera candidatos determinísticos de conversa, reação, provocação, chamadas curtas de Free Fire e pausa. Falas genéricas têm contribuição limitada para não criarem highlights longos apenas pelo acúmulo de frases.
+O detector de combate é heurístico (movimento + energia de áudio + HUD) e adapta o limite à faixa superior de atividade de cada gravação. Picos de combate recebem prioridade adicional. O placar azul/laranja de fim de round também é reconhecido pela sua geometria e preserva pelo menos cinco segundos anteriores, onde normalmente acontece a kill ou morte. A transcrição gera candidatos determinísticos de conversa, reação, provocação, chamadas curtas de Free Fire, kill, morte e pausa. Falas genéricas têm contribuição baixa e limitada para não superarem a ação apenas pelo acúmulo de frases.
 
 As partes mortas são detectadas somente quando a baixa atividade é sustentada e coincide em vários sinais: pouco movimento, áudio baixo, ausência de fala e ausência de mudança relevante no HUD. Essas zonas separam highlights próximos e aparam o excesso de contexto; silêncio isolado durante combate não é cortado. Cadeias longas de eventos são divididas em clipes menores e os contextos vizinhos não repetem os mesmos frames.
 
@@ -56,7 +56,7 @@ O vídeo original nunca é modificado. Cada projeto vai para `projects/<vídeo>-
 
 `log.txt` registra etapas importantes do projeto, como transcrição, análise, EDL e renderização, sem inundar o terminal.
 
-Quando legendas estiverem ativadas, `subtitles.srt` é gerado localmente com timestamps remapeados para a edição final. No modo **Apenas momentos importantes**, o MVP mantém falas enfáticas, reações e provocações detectadas; **Todas as falas** mantém toda fala que atravessa um segmento escolhido.
+Quando legendas estiverem ativadas, `subtitles.srt` é gerado localmente com timestamps remapeados para a edição final. Toda fala que atravessa um trecho escolhido é legendada, inclusive no modo **Apenas momentos importantes**, pois o próprio trecho já passou pela seleção editorial. As frases são divididas usando os tempos de cada palavra em blocos de até cinco palavras, 32 caracteres, duas linhas e aproximadamente 2,4 segundos, facilitando a leitura durante a ação.
 
 Se não houver fala dentro de um trecho selecionado, a renderização segue normalmente sem criar um arquivo de legenda vazio.
 
@@ -70,7 +70,7 @@ As chaves em `config/freefire.json` também são respeitadas ao salvar a EDL: se
 
 Para usar um som próprio, coloque um arquivo WAV, MP3, AAC, M4A, OGG ou FLAC em `assets/sfx/`, atualize a página e selecione-o no highlight. O som é misturado localmente no início desse trecho; nenhum arquivo é baixado nem escolhido automaticamente.
 
-O detector de possível abate/morte é conservador: ele depende de atividade de combate e de mudanças em regiões de kill feed ou HP que você calibrar. Sem essa calibração, o app mostrará combates e conversas, mas não inventará um abate.
+O detector de possível abate/morte combina três fontes: placar de fim de round, chamadas faladas como “matei” ou “morri” e, quando calibradas, mudanças nas regiões de kill feed ou HP. Sem calibração, o app ainda prioriza os fins de round e os picos de combate, mas mantém os demais sinais visuais como candidatos para não afirmar uma kill incorreta.
 
 ## Calibração de layout
 
@@ -89,7 +89,7 @@ A página **Configurar layout do Free Fire** extrai um frame, permite escolher w
 - **Página não inicia:** rode `setup.bat` uma vez e execute novamente `start.bat`.
 - **FFmpeg não encontrado:** instale uma build Windows e adicione a pasta `bin` ao PATH.
 - **Sem transcrição:** execute `setup.bat` para instalar `faster-whisper`. O aplicativo usa CPU com `int8` como fallback local; se a transcrição ainda falhar, o restante do pipeline continua disponível e mostra o motivo na tela.
-- **Render falha com AMF:** o atual render usa `libx264` de forma estável. A aceleração AMD está documentada para evolução futura, depois de um vídeo real de teste.
+- **Render falha com AMF:** o app tenta `h264_amf` na Radeon e volta automaticamente para `libx264` com limite de threads se o driver recusar o encoder.
 
 ## Desenvolvimento
 

@@ -1,9 +1,10 @@
 from pathlib import Path
+import numpy as np
 
 from app.core.edl import automatic_target_duration, edl_duration, make_edl, validate_highlights
 from app.core.effects import filters_for_effects, validate_effect, windowed_video_filtergraph
-from app.core.captions import build_srt, srt_timestamp
-from app.core.gameplay import normalized_to_pixels, detect_dead_zones, detect_events, detect_outcome_candidates, sanitize_activity, save_debug_frames
+from app.core.captions import build_srt, srt_timestamp, _caption_chunks
+from app.core.gameplay import normalized_to_pixels, detect_dead_zones, detect_events, detect_outcome_candidates, sanitize_activity, save_debug_frames, _round_result_score
 from app.core.gameplay import build_activity_score
 from app.core.audio import _times, audio_features_are_finite
 from app.core.highlights import group_events
@@ -130,6 +131,13 @@ def test_short_source_uses_proportional_target_and_clips_single_long_segment():
     assert target == 6 and edl_duration(edl["segments"]) == 6
 
 
+def test_long_source_uses_configured_automatic_edit_ratio_and_limits():
+    settings = {"long_video_target_ratio": .35, "long_video_min_target_seconds": 180, "long_video_max_target_seconds": 600}
+    assert automatic_target_duration(1308, settings) == 457.8
+    assert automatic_target_duration(120, settings) == 180
+    assert automatic_target_duration(3600, settings) == 600
+
+
 def test_selected_highlights_must_be_inside_source_duration():
     validate_highlights([{"id":"ok","start":0,"end":3,"selected":True}], 3)
     try: validate_highlights([{"id":"bad","start":3,"end":2,"selected":True}], 4)
@@ -191,6 +199,11 @@ def test_transcript_events_promote_free_fire_callouts_and_reduce_filler():
     assert events[1]["type"] == "conversation" and events[1]["confidence"] < .2
 
 
+def test_transcript_events_promote_spoken_kills_and_deaths():
+    events = transcript_events({"segments": [{"start": 0, "end": 1, "text": "matei, dei capa"}, {"start": 2, "end": 3, "text": "morri, ele me matou"}]})
+    assert [event["type"] for event in events if event["type"] != "idle"] == ["kill_candidate", "death_candidate"]
+
+
 def test_transcription_reports_source_timeline_progress_without_loading_model():
     class Segment:
         def __init__(self, start, end): self.start, self.end, self.text, self.words = start, end, "fala", []
@@ -206,8 +219,19 @@ def test_transcription_reports_source_timeline_progress_without_loading_model():
 def test_adaptive_combat_threshold_finds_relative_action_burst():
     visual = [{"time": time, "motion": .02} for time in range(9)] + [{"time": 9, "motion": .4}]
     audio = [{"time": time, "energy": .04} for time in range(9)] + [{"time": 9, "energy": .5}]
-    assert [event["start"] for event in detect_events(visual, audio, .55) if event["type"] == "combat"] == [9]
-    assert not [event for event in detect_events(visual[:-1], audio[:-1], .55) if event["type"] == "combat"]
+    assert [event["start"] for event in detect_events(visual, audio, .55) if event["type"] == "combat_peak"] == [9]
+    assert not [event for event in detect_events(visual[:-1], audio[:-1], .55) if event["type"] in {"combat", "combat_peak"}]
+
+
+def test_free_fire_round_result_panel_is_detected_by_color_band():
+    frame = np.zeros((90, 160, 3), dtype=np.uint8)
+    y1, y2, x1, x2 = int(.29 * 90), int(.44 * 90), int(.15 * 160), int(.85 * 160)
+    middle = (x1 + x2) // 2
+    frame[y1:y2, x1:middle] = (255, 0, 0)
+    frame[y1:y2, middle:x2] = (0, 90, 255)
+    assert _round_result_score(frame) > .95
+    gameplay = np.full_like(frame, (40, 110, 190))
+    assert _round_result_score(gameplay) == 0
 
 
 def test_captions_use_output_timeline_offsets(tmp_path):
@@ -215,6 +239,17 @@ def test_captions_use_output_timeline_offsets(tmp_path):
     count = build_srt({"segments": [{"start": 11, "end": 12, "text": "nossa!"}]}, [{"start": 10, "end": 15}, {"start": 20, "end": 25}], output, "all")
     assert count == 1 and "00:00:01,000 --> 00:00:02,000" in output.read_text(encoding="utf-8")
     assert srt_timestamp(3661.234) == "01:01:01,234"
+
+
+def test_important_captions_cover_all_selected_speech_in_short_chunks(tmp_path):
+    output = tmp_path / "captions.srt"
+    phrase = {"start": 0, "end": 4, "text": "vamos subir naquela casa porque o inimigo está chegando agora"}
+    count = build_srt({"segments": [phrase]}, [{"start": 0, "end": 4}], output, "Apenas momentos importantes")
+    blocks = output.read_text(encoding="utf-8").strip().split("\n\n")
+    assert count >= 2 and len(blocks) == count
+    assert all(len(" ".join(block.splitlines()[2:]).split()) <= 5 for block in blocks)
+    assert _caption_chunks({"start": 0, "end": 4, "text": "vai"}, 0, 4)[0][1] == 2.4
+    assert _caption_chunks({"start": 0, "end": 1, "text": "palavramuitolongasemespaco"}, 0, 1)[0][2] == "palavramuitolongasemespaco"
 
 
 def test_empty_caption_selection_removes_stale_subtitle_file(tmp_path):
@@ -283,6 +318,13 @@ def test_short_video_highlights_use_shorter_context():
     event = {"start": 5, "end": 6, "type": "combat", "confidence": 1, "signals": {"motion": 1, "audio": 1}}
     highlight = build_highlights([event], {"combat": 4, "motion": 2, "audio": 2, "confidence": 1}, settings, 10)[0]
     assert highlight["start"] == 4 and highlight["end"] == 7
+
+
+def test_round_end_keeps_extra_context_before_kill_or_death():
+    settings = {"pre_context_seconds": 3, "post_context_seconds": 3, "round_end_pre_context_seconds": 5, "merge_gap_seconds": 4, "minimum_score": 0}
+    event = {"start": 10, "end": 11, "type": "round_end", "confidence": 1, "signals": {}}
+    highlight = build_highlights([event], {"round_end": 9}, settings, 20)[0]
+    assert highlight["start"] == 5 and highlight["end"] == 14
 
 
 def test_dead_zones_trim_highlight_context():

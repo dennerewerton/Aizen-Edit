@@ -37,9 +37,14 @@ def build_highlights(events: list[dict], weights: dict, settings: dict, duration
         # Several ordinary sentences must not manufacture a highlight merely by
         # accumulating score. Strong reactions and gameplay events stay uncapped.
         score = sum(regular_scores) + sum(conversation_scores[:settings.get("max_conversation_events", 3)])
-        if score < settings["minimum_score"]: continue
+        action_types = {"combat", "combat_peak", "round_end", "kill", "kill_candidate", "death", "death_candidate", "reaction", "trash_talk"}
+        minimum = settings["minimum_score"] if any(event["type"] in action_types for event in group) else settings.get("conversation_minimum_score", settings["minimum_score"])
+        if score < minimum: continue
         types = list(dict.fromkeys(event["type"] for event in group))
-        start = max(0, group[0]["start"] - pre_context)
+        group_pre_context = pre_context
+        if "round_end" in types:
+            group_pre_context = max(group_pre_context, settings.get("round_end_pre_context_seconds", 5.0))
+        start = max(0, group[0]["start"] - group_pre_context)
         end = group[-1]["end"] + post_context
         before = [zone["end"] for zone in (dead_zones or []) if start < zone["end"] <= group[0]["start"]]
         after = [zone["start"] for zone in (dead_zones or []) if group[-1]["end"] <= zone["start"] < end]
