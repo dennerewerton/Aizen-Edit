@@ -170,7 +170,7 @@ def test_vertical_output_profile_builds_full_and_top_split_filters(tmp_path):
     split = normalize_output_settings({"output_format": "9:16", "vertical_mode": "top_split"})
     split_command = segment_command(tmp_path / "in.mp4", {"start": 0, "end": 4}, tmp_path / "split.mp4", "60/1", output_profile=split)
     graph = split_command[split_command.index("-filter_complex") + 1]
-    assert "scale=1080:600" in graph and "scale=1080:1320" in graph and "vstack=inputs=2" in graph
+    assert "scale=1080:608" in graph and "scale=1080:1312" in graph and "vstack=inputs=2" in graph
     assert output_size({"width": 1920, "height": 1080}, split) == (1080, 1920)
 
 

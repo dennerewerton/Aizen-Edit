@@ -33,10 +33,10 @@ def _vertical_filtergraph(profile: dict, fps: str, preview_height: int | None, e
     if preview_height:
         tail.append(f"scale=-2:{preview_height}")
     if profile.get("vertical_mode") == "top_split":
-        # 600 px webcam + 1320 px gameplay keeps a clean 1080x1920 short.
+        # A true 16:9 webcam band plus all remaining height for gameplay.
         return ";".join([
-            f"[0:v]{_crop_filter(crops['webcam'], 1080, 600)}[webcam]",
-            f"[0:v]{_crop_filter(crops['gameplay'], 1080, 1320)}[gameplay]",
+            f"[0:v]{_crop_filter(crops['webcam'], 1080, 608)}[webcam]",
+            f"[0:v]{_crop_filter(crops['gameplay'], 1080, 1312)}[gameplay]",
             f"[webcam][gameplay]vstack=inputs=2,{','.join(tail)}[vout]",
         ])
     return f"[0:v]{_crop_filter(crops['gameplay'], 1080, 1920)},{','.join(tail)}[vout]"

@@ -10,7 +10,7 @@ def default_output_settings() -> dict:
         "vertical_mode": "full",
         "crops": {
             "gameplay": {"x": .219, "y": 0.0, "width": .562, "height": 1.0},
-            "webcam": {"x": .10, "y": .05, "width": .80, "height": .444},
+            "webcam": {"x": .10, "y": .05, "width": .80, "height": .45},
         },
     }
 
