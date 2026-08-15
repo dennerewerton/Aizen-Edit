@@ -9,4 +9,5 @@ sample-60fps.mp4
 *.mp4
 build/
 dist/
+release/
 *.spec
