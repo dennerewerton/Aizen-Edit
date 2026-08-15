@@ -20,13 +20,37 @@ def encoder_options(video_encoder: str, cpu_threads: int = 0) -> list[str]:
     return options
 
 
-def segment_command(source: Path, segment: dict, output: Path, fps: str, preview_height: int | None = None, has_audio: bool = True, layout: dict | None = None, output_size: tuple[int, int] | None = None, video_encoder: str = "libx264", cpu_threads: int = 0) -> list[str]:
+def _crop_filter(region: dict, width: int, height: int) -> str:
+    """Crop a normalized, user-selected source rectangle and scale it exactly."""
+    return f"crop=trunc(iw*{region['width']}/2)*2:trunc(ih*{region['height']}/2)*2:iw*{region['x']}:ih*{region['y']},scale={width}:{height}"
+
+
+def _vertical_filtergraph(profile: dict, fps: str, preview_height: int | None, effect_video: list[str]) -> str | None:
+    if profile.get("output_format") != "9:16":
+        return None
+    crops = profile["crops"]
+    tail = [*effect_video, f"fps={fps}"]
+    if preview_height:
+        tail.append(f"scale=-2:{preview_height}")
+    if profile.get("vertical_mode") == "top_split":
+        # 600 px webcam + 1320 px gameplay keeps a clean 1080x1920 short.
+        return ";".join([
+            f"[0:v]{_crop_filter(crops['webcam'], 1080, 600)}[webcam]",
+            f"[0:v]{_crop_filter(crops['gameplay'], 1080, 1320)}[gameplay]",
+            f"[webcam][gameplay]vstack=inputs=2,{','.join(tail)}[vout]",
+        ])
+    return f"[0:v]{_crop_filter(crops['gameplay'], 1080, 1920)},{','.join(tail)}[vout]"
+
+
+def segment_command(source: Path, segment: dict, output: Path, fps: str, preview_height: int | None = None, has_audio: bool = True, layout: dict | None = None, output_size: tuple[int, int] | None = None, video_encoder: str = "libx264", cpu_threads: int = 0, output_profile: dict | None = None) -> list[str]:
     duration = segment["end"] - segment["start"]
     fade = min(0.03, duration / 4)
     effect_video, effect_audio = filters_for_effects(segment.get("effects", []), layout, output_size)
     filters = effect_video + [f"fps={fps}"]
     if preview_height: filters.append(f"scale=-2:{preview_height}")
-    graph = windowed_video_filtergraph(segment.get("effects", []), layout, fps, preview_height)
+    graph = _vertical_filtergraph(output_profile or {}, fps, preview_height, effect_video)
+    if graph is None:
+        graph = windowed_video_filtergraph(segment.get("effects", []), layout, fps, preview_height)
     has_window_graph = graph is not None
     sfx = sfx_path(segment.get("sfx"))
     command = ["ffmpeg", "-y", "-ss", str(segment["start"]), "-i", str(source)]
@@ -89,7 +113,7 @@ def _subtitle_filter(path: Path, layout: dict | None = None, output_size: tuple[
     return f"subtitles=filename='{escaped}':charenc=UTF-8:force_style='{subtitle_style(layout, output_size)}'"
 
 
-def render(source: Path, edl: dict, output: Path, preview_height: int | None = None, has_audio: bool = True, cancelled=None, progress=None, layout: dict | None = None, output_size: tuple[int, int] | None = None, use_hardware: bool = False, cpu_threads: int = 0, filter_threads: int = 0) -> None:
+def render(source: Path, edl: dict, output: Path, preview_height: int | None = None, has_audio: bool = True, cancelled=None, progress=None, layout: dict | None = None, output_size: tuple[int, int] | None = None, output_profile: dict | None = None, use_hardware: bool = False, cpu_threads: int = 0, filter_threads: int = 0) -> None:
     if not edl["segments"]: raise ValueError("Nenhum highlight selecionado para renderizar.")
     work = output.parent / "render_segments"; work.mkdir(exist_ok=True)
     clips = []
@@ -98,10 +122,10 @@ def render(source: Path, edl: dict, output: Path, preview_height: int | None = N
         clip = work / f"{index:03}.mp4"; clips.append(clip)
         preferred = encoder(use_hardware)
         try:
-            _run(segment_command(source, segment, clip, edl["fps_rational"], preview_height, has_audio, layout, output_size, preferred, cpu_threads), cancelled, cpu_threads, filter_threads)
+            _run(segment_command(source, segment, clip, edl["fps_rational"], preview_height, has_audio, layout, output_size, preferred, cpu_threads, output_profile), cancelled, cpu_threads, filter_threads)
         except subprocess.CalledProcessError:
             if preferred != "h264_amf": raise
-            _run(segment_command(source, segment, clip, edl["fps_rational"], preview_height, has_audio, layout, output_size, "libx264", cpu_threads), cancelled, cpu_threads, filter_threads)
+            _run(segment_command(source, segment, clip, edl["fps_rational"], preview_height, has_audio, layout, output_size, "libx264", cpu_threads, output_profile), cancelled, cpu_threads, filter_threads)
         if progress: progress(index + 1, len(edl["segments"]))
     listing = work / "concat.txt"
     listing.write_text("".join(f"file '{clip.resolve().as_posix()}'\n" for clip in clips), encoding="utf-8")

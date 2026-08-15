@@ -17,6 +17,7 @@ from .core.gameplay import analyze_gameplay, build_activity_score, detect_dead_z
 from .core.highlights import build_highlights, style_highlight_settings
 from .core.jobs import JobManager
 from .core.layout import load_layout, save_layout
+from .core.output import normalize_output_settings, output_size
 from .core.paths import CONFIG, PROJECTS, ROOT
 from .core.probe import probe_video
 from .core.project import append_log, create_project, read_json, recent_projects, write_json
@@ -32,10 +33,11 @@ app.mount("/static", StaticFiles(directory=ROOT / "app" / "web" / "static"), nam
 jobs = JobManager()
 
 
-class VideoRequest(BaseModel): path: str; edit_type: str = "automatic"; effects: str = "medium"; captions: str = "important"; target_duration: str = "automatic"
+class VideoRequest(BaseModel): path: str; edit_type: str = "automatic"; effects: str = "medium"; captions: str = "important"; target_duration: str = "automatic"; output_format: str = "16:9"; vertical_mode: str = "full"; crops: dict = {}
 class HighlightsRequest(BaseModel): project: str; highlights: list[dict]
 class ProjectRequest(BaseModel): project: str
 class LayoutRequest(BaseModel): project: str; layout: dict
+class OutputRequest(BaseModel): project: str; output_format: str; vertical_mode: str = "full"; crops: dict = {}
 
 
 @app.get("/api/health")
@@ -58,9 +60,11 @@ def load_video(request: VideoRequest):
     video = Path(request.path)
     if not video.is_file(): raise HTTPException(400, "Caminho de vídeo inválido.")
     source = probe_video(video)
-    settings = request.model_dump()
+    try: output = normalize_output_settings(request.model_dump())
+    except ValueError as error: raise HTTPException(400, str(error)) from error
+    settings = {**request.model_dump(), **output}
     project = create_project(video, source, settings)
-    return {"project": str(project), "source": source}
+    return {"project": str(project), "source": source, "settings": settings}
 
 
 @app.get("/api/projects")
@@ -187,7 +191,11 @@ def render_video(kind: str, request: ProjectRequest):
     def work(job):
         output = project / f"{kind}.mp4"; job.update("Renderizando segmentos", 5); append_log(project, f"Iniciando renderização {kind}")
         defaults = read_json(CONFIG / "default.json")
-        render(Path(source["path"]), edl, output, 720 if kind == "preview" else None, has_audio=bool(source["audio"]), cancelled=job.cancelled, progress=lambda n, total: job.update("Renderizando segmentos", 5 + int(80 * n / total)), layout=load_layout(project), output_size=(source["width"], source["height"]), use_hardware=defaults.get("use_hardware_encoder", False), cpu_threads=int(defaults.get("cpu_threads", 0)), filter_threads=int(defaults.get("filter_threads", 0)))
+        settings = read_json(project / "settings.json", {})
+        try: output_profile = normalize_output_settings(settings)
+        except ValueError: output_profile = normalize_output_settings({})
+        size = output_size(source, output_profile)
+        render(Path(source["path"]), edl, output, 720 if kind == "preview" else None, has_audio=bool(source["audio"]), cancelled=job.cancelled, progress=lambda n, total: job.update("Renderizando segmentos", 5 + int(80 * n / total)), layout=load_layout(project), output_size=size, output_profile=output_profile, use_hardware=defaults.get("use_hardware_encoder", False), cpu_threads=int(defaults.get("cpu_threads", 0)), filter_threads=int(defaults.get("filter_threads", 0)))
         if job.cancelled.is_set(): return {}
         job.update("Verificando saída", 92); verification = verify_render(output, source["fps"], expected_edl_duration(edl)); write_json(project / f"{kind}_verify.json", verification); append_log(project, f"Renderização {kind} concluída; validação: {'ok' if verification['ok'] else 'falhou'}")
         return {"file": f"{kind}.mp4", "verification": verification}
@@ -243,3 +251,14 @@ def get_layout(project: str):
 def put_layout(request: LayoutRequest):
     try: return save_layout(folder(request.project), request.layout)
     except ValueError as error: raise HTTPException(400, str(error)) from error
+
+
+@app.put("/api/output")
+def put_output(request: OutputRequest):
+    project = folder(request.project)
+    try: output = normalize_output_settings(request.model_dump())
+    except ValueError as error: raise HTTPException(400, str(error)) from error
+    settings = read_json(project / "settings.json", {})
+    settings.update(output); write_json(project / "settings.json", settings)
+    append_log(project, f"Formato de saída atualizado: {output['output_format']} / {output['vertical_mode']}")
+    return output

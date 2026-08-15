@@ -20,6 +20,7 @@ from app.core import assets as assets_module
 from app.core.probe import _ratio
 from app.core.ranking import score_event
 from app.core.renderer import encoder_options, segment_command, subtitle_style
+from app.core.output import normalize_output_settings, output_size
 from app.core.verify import expected_edl_duration
 from app.core.speech import transcript_events
 from app.core.transcription import FasterWhisperTranscriber
@@ -160,6 +161,17 @@ def test_ffmpeg_command_preserves_fps(tmp_path):
     limited = segment_command(tmp_path / "in.mp4", {"start":0,"end":4}, tmp_path / "out.mp4", "60/1", video_encoder="libx264", cpu_threads=4)
     thread_option = limited.index("-threads")
     assert limited[thread_option:thread_option + 2] == ["-threads", "4"]
+
+
+def test_vertical_output_profile_builds_full_and_top_split_filters(tmp_path):
+    full = normalize_output_settings({"output_format": "9:16", "vertical_mode": "full"})
+    full_command = segment_command(tmp_path / "in.mp4", {"start": 0, "end": 4}, tmp_path / "full.mp4", "60/1", output_profile=full)
+    assert "-filter_complex" in full_command and "scale=1080:1920" in full_command[full_command.index("-filter_complex") + 1]
+    split = normalize_output_settings({"output_format": "9:16", "vertical_mode": "top_split"})
+    split_command = segment_command(tmp_path / "in.mp4", {"start": 0, "end": 4}, tmp_path / "split.mp4", "60/1", output_profile=split)
+    graph = split_command[split_command.index("-filter_complex") + 1]
+    assert "scale=1080:600" in graph and "scale=1080:1320" in graph and "vstack=inputs=2" in graph
+    assert output_size({"width": 1920, "height": 1080}, split) == (1080, 1920)
 
 
 def test_hardware_encoder_options_are_h264_amf_specific():
