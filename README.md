@@ -18,7 +18,9 @@ As partes mortas são detectadas somente quando a baixa atividade é sustentada 
 
 Na primeira transcrição, o modelo local é baixado uma única vez. Este computador usa CPU + `int8`: a Radeon RX 6800 XT não é aproveitada por `faster-whisper` no Windows, pois o backend GPU dele exige CUDA/NVIDIA. A análise visual continua caso o backend não esteja disponível.
 
-Para renderização, o aplicativo tenta `h264_amf` da Radeon RX 6800 XT quando `use_hardware_encoder` está ativo em `config/default.json`. Caso AMF não esteja disponível no driver, cada segmento volta automaticamente para `libx264` em CPU.
+Para renderização, o aplicativo usa `h264_amf` da Radeon RX 6800 XT quando `use_hardware_encoder` está ativo em `config/default.json`, inclusive na etapa final que aplica legendas. Caso AMF não esteja disponível no driver, cada segmento volta automaticamente para `libx264` em CPU.
+
+Para controlar a temperatura, o padrão limita o FFmpeg a `cpu_threads: 4` e `filter_threads: 2` no mesmo arquivo. Em um Ryzen 9 5900X de 24 threads lógicas, isso reduz bastante a carga de CPU durante a edição; aumente ou diminua esses números apenas se necessário.
 
 ### LLM local opcional
 

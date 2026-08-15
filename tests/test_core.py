@@ -16,7 +16,7 @@ from app.core.project import recent_projects
 from app.core import assets as assets_module
 from app.core.probe import _ratio
 from app.core.ranking import score_event
-from app.core.renderer import segment_command, subtitle_style
+from app.core.renderer import encoder_options, segment_command, subtitle_style
 from app.core.verify import expected_edl_duration
 from app.core.speech import transcript_events
 
@@ -145,6 +145,13 @@ def test_ffmpeg_command_preserves_fps(tmp_path):
     assert "libx264" in command
     amf = segment_command(tmp_path / "in.mp4", {"start":0,"end":4}, tmp_path / "out.mp4", "60/1", video_encoder="h264_amf")
     assert "h264_amf" in amf
+    limited = segment_command(tmp_path / "in.mp4", {"start":0,"end":4}, tmp_path / "out.mp4", "60/1", video_encoder="libx264", cpu_threads=4)
+    thread_option = limited.index("-threads")
+    assert limited[thread_option:thread_option + 2] == ["-threads", "4"]
+
+
+def test_hardware_encoder_options_are_h264_amf_specific():
+    assert encoder_options("h264_amf", 4) == ["-c:v", "h264_amf", "-quality", "quality", "-rc", "cqp", "-qp_i", "20", "-qp_p", "22", "-threads", "4"]
 
 
 def test_layout_requires_normalized_regions():
